@@ -1,0 +1,17 @@
+class,name,position,money,per_house,per_hotel,price,n_spaces
+MoveTo,Advance to Go,0,0,0,0,0,0
+MoveTo,Advance to Illinois Avenue ,24,0,0,0,0,0
+MoveTo,Advance to St. Charles Place ,11,0,0,0,0,0
+MoveToUnitily,Advance to nearest Utility,None,0,0,0,0,0
+MoveToRailroad,Advance to nearest Railroad,None,0,0,0,0,0
+GetFromBank,Dividend 50,None,50,0,0,0,0
+GetOutOfJail,Get out of jail free,None,0,0,0,0,0
+MoveBack,Move back 3 spaces,None,0,0,0,0,3
+GoToJail,Go to jail,None,0,0,0,0,0
+Repairs,General repairs,None,0,25,100,0,0
+PayBank,Pay poor tax of 15,None,0,0,0,15,0
+MoveTo,Move to Reading Railroad,5,0,0,0,0,0
+MoveTo,Move to Broadwalk,39,0,0,0,0,0
+PayEachPlayer,Pay each player 50,None,0,0,0,50,0
+GetFromBank,Your building and loan matures,None,150,0,0,0,0
+GetFromBank,You have won a crossword competition,None,100,0,0,0,0

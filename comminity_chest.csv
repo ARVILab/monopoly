@@ -1,0 +1,17 @@
+class,name,position,money,per_house,per_hotel,price,n_spaces
+MoveTo,Advance to Go,0,0,0,0,0,0
+GetFromBank,Bank error,None,200,0,0,0,0
+PayBank,Doctor fee,None,0,0,0,50,0
+GetFromBank,From sale of stock,None,50,0,0,0,0
+GetOutOfJail,Get out of jail free,None,0,0,0,0,0
+GoToJail,Go to jail,None,0,0,0,0,0
+GetFromEachPlayer,Grand Opera Night ,None,50,0,0,0,0
+GetFromBank,Holiday,None,100,0,0,0,0
+GetFromBank,Income tax,None,20,0,0,0,0
+GetFromBank,Life insurance,None,100,0,0,0,0
+PayBank,Hospital fees,None,0,0,0,50,0
+PayBank,School fees,None,0,0,0,50,0
+GetFromBank,Consultancy fee,None,25,0,0,0,0
+Repairs,Street repairs,None,0,40,115,0,0
+GetFromBank, Second prize,None,10,0,0,0,0
+GetFromBank,inheritance,None,100,0,0,0,0

@@ -1,0 +1,8 @@
+2. How to implement all the cards?
+
+5. When it is a short game (finish after n rounds) we must sum up every piece of value (money, houses, hotels, streets)
+
+8. Must add finite amount of houses and hotels.
+9. Play with house rule 'full auction monopoly'.
+
+10. Don't forget to update rent when buying streets 
