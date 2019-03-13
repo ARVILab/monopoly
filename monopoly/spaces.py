@@ -1,4 +1,4 @@
-from monopoly import dice
+from . import dice
 from random import shuffle
 
 class Space:
@@ -9,6 +9,7 @@ class Space:
         self.name = attrib['name']            # Property name
         self.position = attrib['position']    # Board position
         self.type = attrib['class']           # Class
+        self.position_in_action = attrib['position_in_action']          # index of property in action
 
     def get_type(self):
         return self.type
@@ -29,7 +30,6 @@ class Property(Space):
         self.current_rent = self.init_rent                              # Current rent
         self.monopoly_max_income = attrib['monopoly_max_income']        # maximum money u can make from this monopoly
         self.monopoly_max_price = attrib['monopoly_max_price']          # maximum money u can spend on this monopoly
-        self.position_in_action = attrib['position_in_action']          # index of property in action
         self.is_mortgaged = False                                       # Mortgage status
         self.owner = None                                               # Property owner
 
@@ -122,9 +122,9 @@ class CardHolder(Space):
     def __init__(self, attrib, cards):
         Space.__init__(self, attrib)
 
-        shuffle(cards)
-
-        self.deck = Queue(cards)
+        # shuffle(cards)
+        #
+        # self.deck = Queue(cards)
 
     def take_card(self):
         card = self.deck.pop()
@@ -134,16 +134,16 @@ class CardHolder(Space):
 
 class Chance(CardHolder):
 
-    def __init__(self, attrib, cards_file):
+    def __init__(self, attrib, cards_file='chance.csv'):
         # read cards
-        CardHolder.__init__(self, attrib, cards)
+        CardHolder.__init__(self, attrib, [])
 
 
 class Chest(CardHolder):
 
-    def __init__(self, attrib, cards_file):
+    def __init__(self, attrib, cards_file='community_chest.csv'):
         # read cards
-        CardHolder.__init__(self, attrib, cards)
+        CardHolder.__init__(self, attrib, [])
 
 
 class Queue(object):

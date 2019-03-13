@@ -1,16 +1,23 @@
 import logging
-from monopoly import config
+import pandas as pd
+import numpy as np
+
+from . import config
+from . import bank
+from . import spaces
+from . import dice
+
+logger = logging.getLogger(__name__)
 
 class Game:
 
-    def __init__(self, players, dice_class):
+    def __init__(self, players):
         self.round = 0
         self.players = players
-        self.bank = Bank()
+        self.bank = bank.Bank()
         self.board = []
 
         self.dice = None
-        self.dice_class = dice_class
 
         self.players_left = len(players)
         self.lost_players = []
@@ -24,14 +31,14 @@ class Game:
         self.players_left = len(self.players)
         self.update_player_indexes()
 
-        logger.info('Player {id} was removed from game. Players left {}'.format(id=loser.id, self.players_left))
+        logger.info('Player {} was removed from game. Players left {}'.format(loser.id, self.players_left))
 
     def update_player_indexes(self):
-        for i in range(players_left):
+        for i in range(self.players_left):
             self.players[i].index = i
 
     def pass_dice(self):
-        self.dice = self.dice_class.Dice()
+        self.dice = dice.Dice()
 
     def update_round(self):
         self.round += 1
@@ -41,6 +48,10 @@ class Game:
             logger.info('Starting round {round}...'.format(round=self.round))
 
     def is_game_active(self):
+        if config.verbose['is_game_active']:
+            logger.info('\n')
+            logger.info('{} players left, game is active {}'.format( self.players_left, self.players_left > 1))
+
         return self.players_left > 1
 
     def get_board(self, board_file):
@@ -97,8 +108,8 @@ class Game:
                 if bid_leader.id == curr_bidder.id:
                     break
 
-            stop, bid = curr_bidder.get_bid(max_bid, org_price, self.get_state(curr_bidder)) # check here whether he can afford it
-            if stop:
+            do_nothing, bid = curr_bidder.get_bid(max_bid, org_price, self.get_state(curr_bidder)) # check here whether he can afford it
+            if do_nothing:
                 continue
 
             if bid > max_bid:
@@ -115,12 +126,12 @@ class Game:
     def get_state(self, player):
         opponents = self.get_opponents(player)
 
-        state = self.properties_state(player, opponents)
+        state = self.get_properties_state(player, opponents)
 
         position = player.position / 39
 
-        player_properties = self.count_owned_properties(agent)
-        all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + n_agent_properties
+        player_properties = self.count_owned_properties(player)
+        all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
         properties_value = 0 if all_properties == 0 else player_properties / all_properties
         money = self.get_money(player, opponents)
 
@@ -143,10 +154,10 @@ class Game:
         if monopoly in player.properties:
             properties = player.properties[monopoly]
             if monopoly == 'Railroad':
-                player_makes = properties[0].rent_now / properties[0].['monopoly_max_income']
+                player_makes = properties[0].current_rent / properties[0].monopoly_max_income
                 player_owns = len(properties) / 4
             elif monopoly == 'Utility':
-                player_makes = properties[0].rent_now * len(properties) / properties[0].['monopoly_max_income']
+                player_makes = properties[0].current_rent * len(properties) / properties[0].monopoly_max_income
                 player_owns = len(properties) / 2
             else:
                 buildings_cost = 0
@@ -154,9 +165,9 @@ class Game:
                 for property in properties:
                     streets_cost += property.price
                     buildings_cost += property.n_buildings * property.build_cost
-                    player_makes += property.rent_now
-                player_makes /= properties[0].['monopoly_max_income']
-                player_owns = (streets_cost + buildings_cost) / properties[0].['monopoly_max_price']
+                    player_makes += property.current_rent
+                player_makes /= properties[0].monopoly_max_income
+                player_owns = (streets_cost + buildings_cost) / properties[0].monopoly_max_price
         return player_makes, player_owns
 
     def count_owned_properties(self, player):

@@ -1,11 +1,19 @@
-import config
 from random import shuffle
 import sys
-sys.path.append("/monopoly")
+import logging
+
+from policies.random import RandomAgent
+from monopoly.dice import Dice
+from monopoly.player import Player
+from monopoly import config
+from monopoly.game import Game
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 n_games = 1000  # games are basically episodes
-n_rounds = 100  # and rounds are steps
+n_rounds = 1  # and rounds are steps
 
 # TODO: add better logging and more statistics
 
@@ -15,21 +23,28 @@ def main():
 
     for n_game in range(n_games):
 
-        players = [Player(policy=RandomAgent(), jail_policy=RandomJailPolicy(), player_id=i) for i in range(config.n_players)]
+        if config.verbose['game_start']:
+            logger.info('----------------STARTING GAME {}----------------\n'.format(n_game))
+
+        players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
         # players.append(Player(policy=FixedAgent(), player_id=222))
         # shuffle(players)
 
-        game = Game(players=players, dice_class=Dice)
+        game = Game(players=players)
 
         for n_round in range(n_rounds):
 
-            # TODO: change this, don't like two completely the same conditions
+            # TODO: change this, don't like three completely the same conditional statements
             if not game.is_game_active():     # stopping rounds loop
                 break
 
             game.update_round()
 
             for player in game.players:
+
+                if player.is_bankrupt:            # must change it. do it two times because some players can go bankrupt when must pay bank interest
+                    game.remove_player(player)    # other player's mortgaged spaces
+                    break
 
                 if not game.is_game_active():  # stopping players loop
                     break
@@ -40,21 +55,21 @@ def main():
                     if not game.is_game_active():  # stopping players loop
                         break
 
-                    player.before_roll_act(game)
+                    player.optional_actions(game)
 
                     game.dice.roll()
 
-                    if player.is_in_jail(): # need to handle situation when he stayed in prison for 3 moves (he must pay)
-                        stay_in_jail = player.choose_jail_strategy(dice=game.dice)
+                    if player.is_in_jail():
+                        stay_in_jail = player.jail_strategy(dice=game.dice)
                         if stay_in_jail:
-                            player.build(space, game)
+                            player.optional_actions(game)
                             break
 
                     if game.dice.double_counter == 3:
-                        player.go_to_jail()  # in go_to_jail call player.choose_jail_policy so that the player
-                        break                              # leave prison right away
+                        player.go_to_jail()
+                        break
 
-                    player.move(game.dice)
+                    player.move(game.dice.roll_sum)
 
                     if player.position == 30:
                         player.go_to_jail() # the same here

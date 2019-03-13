@@ -5,4 +5,5 @@
 8. Must add finite amount of houses and hotels.
 9. Play with house rule 'full auction monopoly'.
 
-10. Don't forget to update rent when buying streets 
+10. Don't forget to update rent when buying streets
+11. Check removing player from the game when he went bankrupt

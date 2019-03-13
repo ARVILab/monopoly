@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from monopoly import config
+from . import config
 
 logger = logging.getLogger(__name__)
 
