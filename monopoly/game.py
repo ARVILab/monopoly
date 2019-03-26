@@ -174,6 +174,9 @@ class Game:
         return sum([len(player.properties[key]) for key in player.properties])
 
     def get_money(self, player, opponents):
+        # print('player money', player.cash)
+        # for i in range(len(opponents)):
+        #     print('opp {} money {}'.format(i, opponents[i].cash))
         all_money = sum([opp.cash for opp in opponents]) + player.cash
         return player.cash / all_money
 

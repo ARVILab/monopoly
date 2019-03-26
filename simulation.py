@@ -12,8 +12,8 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-n_games = 1000  # games are basically episodes
-n_rounds = 1  # and rounds are steps
+n_games = 1   # games are basically episodes
+n_rounds = 10  # and rounds are steps
 
 # TODO: add better logging and more statistics
 
@@ -31,6 +31,9 @@ def main():
         # shuffle(players)
 
         game = Game(players=players)
+
+        for player in players:
+            player.set_game(game)
 
         for n_round in range(n_rounds):
 
@@ -55,14 +58,14 @@ def main():
                     if not game.is_game_active():  # stopping players loop
                         break
 
-                    player.optional_actions(game)
+                    player.optional_actions()
 
                     game.dice.roll()
 
                     if player.is_in_jail():
                         stay_in_jail = player.jail_strategy(dice=game.dice)
                         if stay_in_jail:
-                            player.optional_actions(game)
+                            player.optional_actions()
                             break
 
                     if game.dice.double_counter == 3:
@@ -79,7 +82,7 @@ def main():
 
                     space = game.board[player.position]
 
-                    player.act(space, game)
+                    player.act(space)
 
                     if player.is_bankrupt:
                         game.remove_player(player)
@@ -91,6 +94,10 @@ def main():
                     # end turn
                     break
 
+        # if game.players_left != 1:
+            # get the richest player. he will be the winner
+            # pass
+        # else:
         win_stats[str(game.players[0].id)] += 1
 
         print('Player {} is on the 1 place'.format(game.players[0].id))
