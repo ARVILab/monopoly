@@ -30,6 +30,21 @@ class Player:
             'Tax': self.act_on_tax
         }
 
+    def show(self):
+        print('Player:', self.id)
+        print('Position:', self.position)
+        print('Money:', self.cash)
+        print('Owns:')
+        for monopoly in self.properties:
+            print('---{}:'.format(monopoly))
+            for space in self.properties[monopoly]:
+                print('-----{}'.format(space.name))
+                if space.get_type() == 'Street':
+                    if space.n_buildings != 0:
+                        print('----------{}'.format(space.n_buildings))
+                if space.is_mortgaged:
+                    print('---------------Mortgaged')
+
     def set_game(self, game):
         self.game = game
 
@@ -51,15 +66,25 @@ class Player:
         if self.position >= 40:
             self.position -= 40
             self.cash += 200
+            if config.verbose['go']:
+                logger.info('Player {id} passed through Go. Got 200 bucks. Now have {cash}'.format(id=self.id, cash=self.cash))
 
         if config.verbose['move']:
             logger.info('Player {id} moved on board from position {old_position} to {new_position}. Now on {space}'.format(
                 id=self.id, old_position=old_position, new_position=self.position, space=self.game.board[self.position].name))
 
-    def pay(self, money, recepient=None):
+    def pay(self, money, recipient=None):
         self.cash -= money
-        if recepient:
-            recepient.cash += money
+        if recipient:
+            recipient.cash += money
+
+        if config.verbose['pay']:
+            recep_id = None
+            if recipient:
+                recep_id = recipient.id
+            else:
+                recep_id = 'bank'
+            logger.info('Player {id1} payed Player {id2} {money}'.format(id1=self.id, id2=recep_id, money=money))
 
     def have_enough_money(self, money):
         return self.cash >= money
@@ -71,24 +96,30 @@ class Player:
         if monopoly not in self.properties:
             self.properties[monopoly] = []
         self.properties[monopoly].append(space)
-        space.onwer = self
+        space.owner = self
         self.update_rent(space)
 
+        if config.verbose['buy']:
+            logger.info('Player {id} bought {space_name} for {price}. Player {id} has {money} now.'.format(id=self.id, space_name=space.name,
+                                                                                        price=price, money=self.cash))
+
     def sell_all_monopoly_building(self, monopoly):
-        for space in monopoly:
+        for space in self.properties[monopoly]:
             self.cash += space.n_buildings * space.build_cost / 2
 
     def is_in_jail(self):
-        if self.jail_turns == 0:
+        if self.jail_turns == 1:
+            if config.verbose['3_moves_in_jail']:
+                print('Player {} was in jail for 3 moves.'.format(self.id))
             self.pay_to_leave_jail()
             return False
-        elif self.jail_turns > 0:
+        elif self.jail_turns > 1:
             self.jail_turns -= 1
             return True
 
     def go_to_jail(self):
         self.position = 10
-        self.jail_turns = 2 # because he leaves jail on the third move
+        self.jail_turns = 3 # because he leaves jail on the third move
 
         logger.info('Player {id} went to jail'.format(id=self.id))
 
@@ -100,28 +131,33 @@ class Player:
         if self.have_enough_money(space.price):
             action_mask[1 + space.position_in_action] = 1.
         state = self.game.get_state(self)
-        action = self.policy.act(state) # don't forget to apply mask
+        action = self.policy.act(state, self.cash)
         action = self.apply_mask(action, action_mask)
         do_nothing = self.apply_action(action)
         if do_nothing:
             self.game.auction(self, space)
 
     def get_bid(self, max_bid, org_price, state):
-        do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state)
+        do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
+        if bid > self.cash:
+            return False, 0
         return do_nothing, bid
 
     def jail_strategy(self, dice=None):
         mask_params = [False, False, True, False]
         action_mask = self.get_action_mask(mask_params)
         state = self.game.get_state(self)
-        action = self.policy.jail_policy(state)
-        action_mask[-3] = action[0]
-        action_mask[-2] = action[1]
+        action = self.policy.jail_policy(state, self.cash)
+        action = self.apply_mask(action, action_mask)
         do_nothing = self.apply_action(action) # here if do_nothing is False it means that he neither paid nor used the card
         if do_nothing:
             if dice:
                 if dice.double:
+                    if config.verbose['double_leave_jail']:
+                        logger.info('Player {} got double. Leave jail.'.format(self.id))
                     return False # means not staying in jail
+            if config.verbose['stay_in_jail']:
+                logger.info('Player {} stays in jail.'.format(self.id))
             return True # staying in jail
         return False # means he paid or used card
 
@@ -135,7 +171,7 @@ class Player:
             mask_params = [True, True, False, False]
             action_mask = self.get_action_mask(mask_params)
             state = self.game.get_state(self)
-            action = self.policy.act(state)
+            action = self.policy.act(state, self.cash)
             action = self.apply_mask(action, action_mask)
             do_nothing = self.apply_action(action)
             if do_nothing:
@@ -172,6 +208,12 @@ class Player:
         if self.can_buy_space(space):
             self.buy(space)
         elif self.can_unmortgage(space):
+            price = space.price_mortgage + space.price * 0.1
+            # logger.info('Can unmortgage. Player {id} have money {cash}. Need money {price}'.format(
+            #     id=self.id,
+            #     cash=self.cash,
+            #     price=price
+            # ))
             self.unmortgage(space)
         elif self.can_build_on_monopoly(monopoly):
             if self.can_build_on_space(space, monopoly):
@@ -195,35 +237,63 @@ class Player:
     def pay_to_leave_jail(self):  # handle bankruptcy here
         self.jail_turns = 0
         money_owned = 50
+        if config.verbose['pay_to_leave_jail']:
+            logger.info('Player {} pays to leave jail. Have money {}'.format(self.id, self.cash))
         if self.have_enough_money(money_owned):
+
             self.pay(money_owned)
         else:
             self.try_to_survive()
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
+                logger.info('Could not pay for leaving jail after 3 move. Went bankrupt.')
                 self.go_bankrupt()
 
 
     def unmortgage(self, space):
-        self.cash -= space.price_mortgage + space.price * 0.1
+        price = space.price_mortgage + space.price * 0.1
+        self.cash -= price
         space.is_mortgaged = False
         self.update_rent(space)
+        if config.verbose['unmortgage']:
+            logger.info('{space_name} is unmortgaged now. Player {id} pays {mortg_money} money. Player {id} has {money}'.format(space_name=space.name, id=self.id,
+                                                                                                                    mortg_money=price, money=self.cash))
 
     def buy_building(self, space):
         self.cash -= space.build_cost
         space.n_buildings += 1
+        if config.verbose['buy_building']:
+            logger.info('Player {id} buys building on space {space_name}. Spent money {build_cost}. Now have money {cash}. Building on this space {n_buildings}'.format(
+                id=self.id,
+                space_name=space.name,
+                build_cost=space.build_cost,
+                cash=self.cash,
+                n_buildings=space.n_buildings
+            ))
         self.update_building_rent(space)
 
     def sell_building(self, space):
-        self.cash += space.build_cost
+        self.cash += space.build_cost / 2
         space.n_buildings -= 1
+        if config.verbose['sell_building']:
+            logger.info('Player {id} sell building on space {space_name}. Got money {build_cost}. Now have money {cash}. Building on this space {n_buildings}'.format(
+                id=self.id,
+                space_name=space.name,
+                build_cost=space.build_cost,
+                cash=self.cash,
+                n_buildings=space.n_buildings
+            ))
         self.update_building_rent(space)
 
     def mortgage(self, space):
         self.cash += space.price_mortgage
         space.is_mortgaged = True
         self.update_rent(space)
+        if config.verbose['mortgage']:
+            logger.info('{space_name} is mortgaged now. Player {id} gets {mortg_money} money. Player {id} has {money}'.format(space_name=space.name, id=self.id,
+                                                                                                                    mortg_money=space.price_mortgage, money=self.cash))
+
 
     def get_space_by_action_index(self, action_index):
         for space in self.game.board:
@@ -235,6 +305,9 @@ class Player:
         return np.array(action) * np.array(mask)
 
     def can_build_on_monopoly(self, monopoly):
+        for space in monopoly:
+            if space.is_mortgaged:
+                return False
         if len(monopoly) != 0:
             if monopoly[0].get_type() == 'Street':
                 if len(monopoly) == monopoly[0].monopoly_size:
@@ -276,7 +349,7 @@ class Player:
 
     def can_unmortgage(self, space):
         if space.is_mortgaged:
-            if self.have_enough_money(space.price_mortgage + space.price_mortgage * 0.1):
+            if self.have_enough_money(space.price_mortgage + space.price * 0.1):
                 return True
         return False
 
@@ -313,9 +386,9 @@ class Player:
                             mask[space.position_in_action] = 1.
         return mask
 
-    def get_make_money_mask(self, is_avaliable):
+    def get_make_money_mask(self, is_available):
         mask = np.zeros(28)
-        if is_avaliable:
+        if is_available:
             for key in self.properties:
                 monopoly = self.properties[key]
                 for space in monopoly:
@@ -342,6 +415,8 @@ class Player:
 
     def act_on_property(self, space, dice):
         if space.owner:
+            if space.owner.id == self.id:
+                return
             money_owned = space.get_rent(dice.roll_sum)
             if self.have_enough_money(money_owned):
                 self.pay(money_owned, space.owner)
@@ -350,6 +425,13 @@ class Player:
                 if self.have_enough_money(money_owned):
                     self.pay(money_owned, space.owner)
                 else:
+                    logger.info(
+                        'Player {id2} could not pay Player {id1} a rent on space {name}. Player {id2} has {cash} but need {rent}'.format(
+                            id1=space.owner.id,
+                            name=space.name,
+                            id2=self.id,
+                            cash=self.cash,
+                            rent=space.current_rent))
                     self.go_bankrupt(space.owner)
         else:
             self.unowned_street(space)
@@ -370,12 +452,19 @@ class Player:
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
+                logger.info(
+                    'Player {id} could not pay tax. Player {id} has {cash} but need {tax}'.format(
+                        id=self.id,
+                        cash=self.cash,
+                        tax=money_owned))
                 self.go_bankrupt()
 
     def count_mortgaged(self, monopoly):
         return len([space for space in monopoly if space.is_mortgaged])
 
     def update_rent(self, space):
+        # print('SPACE MONOPOLY', space.monopoly)
+        # self.show()
         monopoly = self.properties[space.monopoly]
         n_owned = len(monopoly)
         n_mortgaged = self.count_mortgaged(monopoly)
@@ -409,22 +498,25 @@ class Player:
     def update_building_rent(self, space):
         n_buildings = space.n_buildings
         if n_buildings == 0:
-            space.rent_now = space.init_rent
+            space.current_rent = space.init_rent
         if n_buildings == 1:
-            space.rent_now = space.rent_house_1
+            space.current_rent = space.rent_house_1
         if n_buildings == 2:
-            space.rent_now = space.rent_house_2
+            space.current_rent = space.rent_house_2
         if n_buildings == 3:
-            space.rent_now = space.rent_house_3
+            space.current_rent = space.rent_house_3
         if n_buildings == 4:
-            space.rent_now = space.rent_house_4
+            space.current_rent = space.rent_house_4
         if n_buildings == 5:
-            space.rent_now = space.rent_hotel
+            space.current_rent = space.rent_hotel
+
+        if config.verbose['update_building_rent']:
+            logger.info('Space {space_name} now rent {rent}'.format(space_name=space.name, rent=space.get_rent()))
 
     def sell_all_buildings(self):
-        for monopoly in self.properties:
-            if monopoly[0].get_type() == 'Street':
-                self.sell_all_monopoly_building(monopoly)
+        for key in self.properties:
+            if self.properties[key][0].get_type() == 'Street':
+                self.sell_all_monopoly_building(key)
 
     def go_bankrupt(self, creditor=None):
         if creditor:
@@ -432,54 +524,78 @@ class Player:
             self.sell_all_buildings()
             creditor.cash += self.cash
             went_bankrupt = False
-            for monopoly in self.properties:
-                for space in monopoly:
+            for key in self.properties:
+                for space in self.properties[key]:
                     if space.monopoly not in creditor.properties:
                         creditor.properties[space.monopoly] = []
                     creditor.properties[space.monopoly].append(space)
                     space.owner = creditor
+                    if config.verbose['new_owner']:
+                        logger.info('Player {} is the new owner of space {}'.format(creditor.id, space.name))
                     if space.is_mortgaged:
                         creditor.pay_bank_interest(space)
-                        if not creditor.is_bankrupt:
+                        if creditor.is_bankrupt:
                             went_bankrupt = True
                             break
                         mask_params = [True, False, False, False]
                         action_mask = creditor.get_action_mask(mask_params)
                         state = self.game.get_state(creditor)
-                        action = creditor.policy.act(state) # don't forget to apply mask
+                        action = creditor.policy.act(state, self.cash) # don't forget to apply mask
                         action = creditor.apply_mask(action, action_mask)
                         do_nothing = creditor.apply_action(action)
                     creditor.update_rent(space)
                 if went_bankrupt:
                     break
         else:
-            for key in self.properties:
-                for space in self.properties[key]:
-                    space.nullify()
-                    self.game.auction(self, space)
+            if self.game.players_left > 2:
+                for key in self.properties:
+                    for space in self.properties[key]:
+                        space.nullify()
+                        self.game.auction(self, space)
         self.cash = 0
         self.jail_cards = 0
         self.properties = {}
-        self.bankrupt = True
+        self.is_bankrupt = True
 
-    def pay_bank_interest(self, space, creditor):
+    def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
-        if creditor.have_enough_money(bank_interest):
-            creditor.pay(bank_interest)
+        if self.have_enough_money(bank_interest):
+            self.pay(bank_interest)
         else:
-            creditor.try_to_survive()
-            if creditor.have_enough_money(bank_interest):
-                creditor.pay(bank_interest)
+            self.try_to_survive()
+            if self.have_enough_money(bank_interest):
+                self.pay(bank_interest)
             else:
-                creditor.go_bankrupt()
+                logger.info(
+                    'Player {id} could not bank interest for space {name}. Player {id} has {cash} but need {interest}'.format(
+                        id=self.id,
+                        cash=self.cash,
+                        name=space.name,
+                        interest=bank_interest))
+                self.go_bankrupt()
 
     def try_to_survive(self,):
+        if config.verbose['try_to_survive']:
+            logger.info('Player {id} tries to survive. Have money {cash}'.format(id=self.id, cash=self.cash))
         while True:
             mask_params = [False, True, False, False]
             action_mask = self.get_action_mask(mask_params)
             state = self.game.get_state(self)
-            action = self.policy.act(state)
+            action = self.policy.act(state, self.cash)
             action = self.apply_mask(action, action_mask)
             do_nothing = self.apply_action(action)
             if do_nothing:
                 break
+
+
+    def compute_total_wealth(self):
+        total_wealth = self.cash
+        for key in self.properties:
+            for space in self.properties[key]:
+                if space.get_type() == 'Street':
+                    total_wealth += space.n_buildings * space.build_cost
+                space_cost = space.price
+                if space.is_mortgaged:
+                    space_cost /= 2
+                total_wealth += space_cost
+        self.total_wealth = total_wealth

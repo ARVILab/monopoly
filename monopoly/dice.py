@@ -18,7 +18,7 @@ class Dice:
         roll and (3) a counter of the number of consecutive double rolls."""
 
         roll = np.random.choice(np.arange(1, 7), 2)
-
+        # roll = np.array([6, 6])
         self.roll_sum = roll.sum()
         self.double = roll[0] == roll[1]
         self.double_counter += self.double

@@ -90,6 +90,8 @@ class Game:
 
 
     def auction(self, start_player, space):
+        if config.verbose['auction']:
+            logger.info('Auction begins')
         bidder_index = start_player.index
         max_bid = 0
         bid_leader = None
@@ -115,6 +117,19 @@ class Game:
             if bid > max_bid:
                 max_bid = bid
                 bid_leader = curr_bidder
+
+            if config.verbose['auction_process']:
+                if bid_leader:
+                    logger.info('Bid leader Player {}. Max bid {}'.format(bid_leader.id, max_bid))
+                else:
+                    logger.info('No bid leader')
+
+        if config.verbose['auction']:
+            logger.info('Auction finished.')
+            if bid_leader:
+                logger.info('Winner Player {}. Price {}'.format(bid_leader.id, max_bid))
+            else:
+                logger.info('No bid leader')
 
         if bid_leader:
             bid_leader.buy(space, auction_price=max_bid)
@@ -189,10 +204,19 @@ class Game:
         reward = ((v / p) * c) / (1 + np.abs(v / p * c)) + m / p
         return reward
 
-    def get_make_delta(self, player):  # return difference between what player makes from his properties
+    def get_make_delta(self, state):  # returns difference between what player makes from his properties
         agent_makes = 0                # and what opponents make from their properties
         opponents_make = 0
         for i in range(0, config.state_len - 3 - 1, 4):
             agent_makes += state[i]
             opponents_make += state[i + 1]
         return agent_makes - opponents_make
+
+
+    def get_leaderboard(self):
+        for player in self.players:
+            player.compute_total_wealth()
+        leaderboard = [player for player in self.players]
+        leaderboard.sort(key=lambda x: x.total_wealth, reverse=True)
+        return leaderboard
+

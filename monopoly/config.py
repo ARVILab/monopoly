@@ -1,4 +1,4 @@
-n_players = 2                  # Number of players
+n_players = 3                  # Number of players
 
 board_filename = 'board.csv'              # Board filename
 chance_cards_filename = 'chance_cards.csv' # chance cards filename
@@ -11,7 +11,21 @@ verbose = {'move': True,       # logging verbose
            'dice': True,
            'game_start': True,
            'is_game_active': False,
-           'optional_actions': True}
+           'optional_actions': True,
+           'auction': True,
+           'auction_process': True,
+           'mortgage': True,
+           'unmortgage': True,
+           'go': True,
+           'try_to_survive': True,
+           'update_building_rent': True,
+           'buy_building': True,
+           'new_owner': True,
+           '3_moves_in_jail': True,
+           'stay_in_jail': True,
+           'double_leave_jail': True,
+           'pay_to_leave_jail': True,
+           'sell_building': True}
 
 
 

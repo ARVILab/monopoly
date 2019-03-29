@@ -3,6 +3,7 @@ import sys
 import logging
 
 from policies.random import RandomAgent
+from policies.fixed import FixedAgent
 from monopoly.dice import Dice
 from monopoly.player import Player
 from monopoly import config
@@ -12,14 +13,19 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-n_games = 1   # games are basically episodes
-n_rounds = 10  # and rounds are steps
+n_games = 300   # games are basically episodes
+n_rounds = 100  # and rounds are steps
 
 # TODO: add better logging and more statistics
 
 
 def main():
     win_stats = {str(i): 0 for i in range(config.n_players)}
+    # win_stats['000'] = 0
+    win_stats['111'] = 0
+    win_stats['222'] = 0
+    # win_stats = {'000': 0, '111': 0, '222': 0}
+    full_games_counter = 0
 
     for n_game in range(n_games):
 
@@ -27,8 +33,10 @@ def main():
             logger.info('----------------STARTING GAME {}----------------\n'.format(n_game))
 
         players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
-        # players.append(Player(policy=FixedAgent(), player_id=222))
-        # shuffle(players)
+        # players = []
+        players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='111'))
+        players.append(Player(policy=FixedAgent(high=350, low=250, jail=100), player_id='222'))
+        shuffle(players)
 
         game = Game(players=players)
 
@@ -55,6 +63,7 @@ def main():
                 game.pass_dice()
 
                 while True:
+                    player.show()
                     if not game.is_game_active():  # stopping players loop
                         break
 
@@ -74,6 +83,7 @@ def main():
 
                     player.move(game.dice.roll_sum)
 
+
                     if player.position == 30:
                         player.go_to_jail() # the same here
                         break
@@ -91,22 +101,36 @@ def main():
                     if game.dice.double:
                         continue
 
+                    player.show()
                     # end turn
                     break
 
-        # if game.players_left != 1:
-            # get the richest player. he will be the winner
-            # pass
-        # else:
-        win_stats[str(game.players[0].id)] += 1
 
-        print('Player {} is on the 1 place'.format(game.players[0].id))
-        for i in range(len(game.lost_players)):
-            print('Player {} is on the {} place '.format(game.lost_players[i].id, i + 2))
+        if game.players_left != 1:
+            leaderboard = game.get_leaderboard()
+            win_stats[str(leaderboard[0].id)] += 1
+            for i, player in enumerate(leaderboard):
+                print('Player {} is on the {} place. Total wealth {}'.format(player.id, i + 1, player.total_wealth))
+                player.show()
+            if len(game.lost_players) != 0:
+                for i, player in enumerate(game.lost_players):
+                    print('Player {} is on the {} place'.format(player.id, i + 1 + len(leaderboard)))
+                    player.show()
+        else:
+            win_stats[str(game.players[0].id)] += 1
+            full_games_counter += 1
+
+            print('Player {} is on the 1 place'.format(game.players[0].id))
+            game.players[0].show()
+            for i, player in enumerate(game.lost_players):
+                print('Player {} is on the {} place '.format(player.id, i + 2))
+                player.show()
 
     for key in win_stats:
         print('Player {} won {} / {}'.format(key, win_stats[key], n_games))
         print('-------Win rate is {:.2f} %'.format(win_stats[key] / n_games * 100))
+
+    print('Full games played', full_games_counter)
 
 
 
