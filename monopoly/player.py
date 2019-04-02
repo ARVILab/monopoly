@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class Player:
 
-    def __init__(self, policy=None, jail_policy=None, player_id=None):
+    def __init__(self, policy=None, player_id=None):
 
         self.id = player_id             # Identification number
         self.index = 0
@@ -280,7 +280,7 @@ class Player:
             logger.info('Player {id} sell building on space {space_name}. Got money {build_cost}. Now have money {cash}. Building on this space {n_buildings}'.format(
                 id=self.id,
                 space_name=space.name,
-                build_cost=space.build_cost,
+                build_cost=(space.build_cost / 2),
                 cash=self.cash,
                 n_buildings=space.n_buildings
             ))
