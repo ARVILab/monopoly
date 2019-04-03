@@ -20,12 +20,12 @@ n_rounds = 100  # and rounds are steps
 
 
 def main():
-    # win_stats = {str(i): 0 for i in range(config.n_players)}
-    # win_stats['000'] = 0
-    # win_stats['111'] = 0
+    win_stats = {str(i): 0 for i in range(config.n_players)}
+    win_stats['000'] = 0
+    win_stats['111'] = 0
     # win_stats['222'] = 0
-    win_stats = {'000': 0, '111': 0, '222': 0}
-    win_stats['333'] = 0
+    # win_stats = {'000': 0, '111': 0}
+    # win_stats['0'] = 0
     full_games_counter = 0
 
     for n_game in range(n_games):
@@ -33,12 +33,11 @@ def main():
         if config.verbose['game_start']:
             logger.info('----------------STARTING GAME {}----------------\n'.format(n_game))
 
-        # players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
-        players = []
-        players.append(Player(policy=FixedAgent(high=500, low=200, jail=50), player_id='000'))
-        players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='111'))
-        players.append(Player(policy=FixedAgent(high=350, low=200, jail=100), player_id='222'))
-        players.append(Player(policy=FixedAgent(high=400, low=250, jail=150), player_id='333'))
+        players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
+        # players = []
+        # players.append(Player(policy=FixedAgent(high=500, low=200, jail=50), player_id='000'))
+        players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='000'))
+        players.append(Player(policy=FixedAgent(high=350, low=150, jail=100), player_id='111'))
         shuffle(players)
 
         game = Game(players=players)
