@@ -38,7 +38,7 @@ class Player:
         for monopoly in self.properties:
             print('---{}:'.format(monopoly))
             for space in self.properties[monopoly]:
-                print('-----{}'.format(space.name))
+                print('-----{}, rent {}'.format(space.name, space.current_rent))
                 if space.get_type() == 'Street':
                     if space.n_buildings != 0:
                         print('----------{}'.format(space.n_buildings))
@@ -105,7 +105,10 @@ class Player:
 
     def sell_all_monopoly_building(self, monopoly):
         for space in self.properties[monopoly]:
-            self.cash += space.n_buildings * space.build_cost / 2
+            if space.n_buildings != 0:
+                self.cash += space.n_buildings * space.build_cost / 2
+                space.n_buildings = 0
+                self.update_building_rent(space)
 
     def is_in_jail(self):
         if self.jail_turns == 1:
@@ -417,22 +420,26 @@ class Player:
         if space.owner:
             if space.owner.id == self.id:
                 return
-            money_owned = space.get_rent(dice.roll_sum)
-            if self.have_enough_money(money_owned):
-                self.pay(money_owned, space.owner)
-            else:
-                self.try_to_survive()
+            if not space.is_mortgaged:
+                money_owned = space.get_rent(dice.roll_sum)
                 if self.have_enough_money(money_owned):
                     self.pay(money_owned, space.owner)
                 else:
-                    logger.info(
-                        'Player {id2} could not pay Player {id1} a rent on space {name}. Player {id2} has {cash} but need {rent}'.format(
-                            id1=space.owner.id,
-                            name=space.name,
-                            id2=self.id,
-                            cash=self.cash,
-                            rent=space.current_rent))
-                    self.go_bankrupt(space.owner)
+                    self.try_to_survive()
+                    if self.have_enough_money(money_owned):
+                        self.pay(money_owned, space.owner)
+                    else:
+                        logger.info(
+                            'Player {id2} could not pay Player {id1} a rent on space {name}. Player {id2} has {cash} but need {rent}'.format(
+                                id1=space.owner.id,
+                                name=space.name,
+                                id2=self.id,
+                                cash=self.cash,
+                                rent=space.current_rent))
+                        self.go_bankrupt(space.owner)
+            else:
+                if config.verbose['on_mortgaged_property']:
+                    logger.info('{} is mortgaged.'.format(space.name))
         else:
             self.unowned_street(space)
 
@@ -463,42 +470,41 @@ class Player:
         return len([space for space in monopoly if space.is_mortgaged])
 
     def update_rent(self, space):
-        # print('SPACE MONOPOLY', space.monopoly)
-        # self.show()
+
         monopoly = self.properties[space.monopoly]
         n_owned = len(monopoly)
-        n_mortgaged = self.count_mortgaged(monopoly)
 
-        diff = n_owned - n_mortgaged
         space_type = space.get_type()
 
         if space_type == 'Street':
-            if space.monopoly_size == diff:
+            if space.monopoly_size == n_owned:
                 for s in monopoly:
-                    s.current_rent = space.monopoly_rent
+                    s.current_rent = s.monopoly_rent
         if space_type == 'Railroad':
-            if diff == 1:
+            if n_owned == 1:
                 space.current_rent = space.init_rent
-            if diff == 2:
+            if n_owned == 2:
                 for s in monopoly:
-                    s.current_rent = space.rent_railroad_2
-            if diff == 3:
+                    s.current_rent = s.rent_railroad_2
+            if n_owned == 3:
                 for s in monopoly:
-                    s.current_rent = space.rent_railroad_3
-            if diff == 4:
+                    s.current_rent = s.rent_railroad_3
+            if n_owned == 4:
                 for s in monopoly:
-                    s.current_rent = space.monopoly_rent
+                    s.current_rent = s.monopoly_rent
         if space_type == 'Utility':
-            if diff == 1:
+            if n_owned == 1:
                 space.current_rent = space.init_rent
-            if diff == 2:
+            if n_owned == 2:
                 for s in monopoly:
-                    s.current_rent = space.monopoly_rent
+                    s.current_rent = s.monopoly_rent
+
+
 
     def update_building_rent(self, space):
         n_buildings = space.n_buildings
         if n_buildings == 0:
-            space.current_rent = space.init_rent
+            space.current_rent = space.monopoly_rent
         if n_buildings == 1:
             space.current_rent = space.rent_house_1
         if n_buildings == 2:
@@ -537,10 +543,12 @@ class Player:
                         if creditor.is_bankrupt:
                             went_bankrupt = True
                             break
-                        mask_params = [True, False, False, False]
+                        mask_params = [False, False, False, False]
                         action_mask = creditor.get_action_mask(mask_params)
+                        if creditor.can_unmortgage(space):
+                            action_mask[space.position_in_action] = 1.
                         state = self.game.get_state(creditor)
-                        action = creditor.policy.act(state, self.cash) # don't forget to apply mask
+                        action = creditor.policy.act(state, self.cash)
                         action = creditor.apply_mask(action, action_mask)
                         do_nothing = creditor.apply_action(action)
                     creditor.update_rent(space)
@@ -574,7 +582,7 @@ class Player:
                         interest=bank_interest))
                 self.go_bankrupt()
 
-    def try_to_survive(self,):
+    def try_to_survive(self):
         if config.verbose['try_to_survive']:
             logger.info('Player {id} tries to survive. Have money {cash}'.format(id=self.id, cash=self.cash))
         while True:

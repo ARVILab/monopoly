@@ -143,11 +143,11 @@ class Game:
 
         state = self.get_properties_state(player, opponents)
 
-        position = player.position / 39
+        position = np.round(player.position / 39, 2)
 
         player_properties = self.count_owned_properties(player)
         all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
-        properties_value = 0 if all_properties == 0 else player_properties / all_properties
+        properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
         money = self.get_money(player, opponents)
 
         state.extend([position, properties_value, money])
@@ -168,32 +168,41 @@ class Game:
         player_owns = 0
         if monopoly in player.properties:
             properties = player.properties[monopoly]
-            if monopoly == 'Railroad':
-                player_makes = properties[0].current_rent / properties[0].monopoly_max_income
-                player_owns = len(properties) / 4
-            elif monopoly == 'Utility':
-                player_makes = properties[0].current_rent * len(properties) / properties[0].monopoly_max_income
-                player_owns = len(properties) / 2
+            if monopoly == 'Railroad' or monopoly == 'Utility':
+                player_makes, player_owns = self.railroads_and_utility_value(properties)
             else:
                 buildings_cost = 0
                 streets_cost = 0
                 for property in properties:
-                    streets_cost += property.price
-                    buildings_cost += property.n_buildings * property.build_cost
-                    player_makes += property.current_rent
+                    if property.is_mortgaged:
+                        streets_cost += property.price / 2
+                    else:
+                        streets_cost += property.price
+                        buildings_cost += property.n_buildings * property.build_cost
+                        player_makes += property.current_rent
                 player_makes /= properties[0].monopoly_max_income
                 player_owns = (streets_cost + buildings_cost) / properties[0].monopoly_max_price
-        return player_makes, player_owns
+        return np.round(player_makes, 5), np.round(player_owns, 5)
+
+    def railroads_and_utility_value(self, properties):
+        make_value = 0
+        own_value = 0
+        for p in properties:
+            if p.is_mortgaged:
+                own_value += p.price / 2
+            else:
+                make_value += p.current_rent
+                own_value += p.price
+        make_value /= p.monopoly_max_income
+        own_value /= p.monopoly_max_price
+        return make_value, own_value
 
     def count_owned_properties(self, player):
         return sum([len(player.properties[key]) for key in player.properties])
 
     def get_money(self, player, opponents):
-        # print('player money', player.cash)
-        # for i in range(len(opponents)):
-        #     print('opp {} money {}'.format(i, opponents[i].cash))
         all_money = sum([opp.cash for opp in opponents]) + player.cash
-        return player.cash / all_money
+        return np.round(player.cash / all_money, 3)
 
     def get_reward(self, player, state, c=0.01):
         opponents = self.get_opponents(player)
@@ -201,16 +210,19 @@ class Game:
         v = self.get_make_delta(state)
         p = self.players_left
         m = self.get_money(player, opponents)
+        print('v = {}, p = {}, m = {}'.format(v, p, m))
         reward = ((v / p) * c) / (1 + np.abs(v / p * c)) + m / p
-        return reward
+        return np.round(reward, 5)
 
     def get_make_delta(self, state):  # returns difference between what player makes from his properties
         agent_makes = 0                # and what opponents make from their properties
         opponents_make = 0
-        for i in range(0, config.state_len - 3 - 1, 4):
+        for i in range(0, config.state_space - 3, 4):
             agent_makes += state[i]
             opponents_make += state[i + 1]
-        return agent_makes - opponents_make
+        delta = np.round(agent_makes - opponents_make, 5)
+        print('Agent makes {}, opps make {}, diff {}'.format(agent_makes, opponents_make, delta))
+        return delta
 
 
     def get_leaderboard(self):
@@ -219,4 +231,3 @@ class Game:
         leaderboard = [player for player in self.players]
         leaderboard.sort(key=lambda x: x.total_wealth, reverse=True)
         return leaderboard
-

@@ -25,7 +25,8 @@ verbose = {'move': True,       # logging verbose
            'stay_in_jail': True,
            'double_leave_jail': True,
            'pay_to_leave_jail': True,
-           'sell_building': True}
+           'sell_building': True,
+           'on_mortgaged_property': True}
 
 
 
@@ -34,3 +35,4 @@ monopolies = ('Brown', 'Light Blue', 'Pink',
 
 
 # action_space = 115
+state_space = 43

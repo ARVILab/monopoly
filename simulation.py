@@ -4,7 +4,6 @@ import logging
 
 from policies.random import RandomAgent
 from policies.fixed import FixedAgent
-from monopoly.dice import Dice
 from monopoly.player import Player
 from monopoly import config
 from monopoly.game import Game
@@ -13,18 +12,18 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-n_games = 500   # games are basically episodes
+n_games = 1   # games are basically episodes
 n_rounds = 100  # and rounds are steps
 
 # TODO: add better logging and more statistics
 
 
 def main():
-    win_stats = {str(i): 0 for i in range(config.n_players)}
-    win_stats['000'] = 0
-    win_stats['111'] = 0
+    # win_stats = {str(i): 0 for i in range(config.n_players)}
+    # win_stats['000'] = 0
+    # win_stats['111'] = 0
     # win_stats['222'] = 0
-    # win_stats = {'000': 0, '111': 0}
+    win_stats = {'000': 0, '111': 0}
     # win_stats['0'] = 0
     full_games_counter = 0
 
@@ -33,12 +32,12 @@ def main():
         if config.verbose['game_start']:
             logger.info('----------------STARTING GAME {}----------------\n'.format(n_game))
 
-        players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
-        # players = []
+        # players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
+        players = []
         # players.append(Player(policy=FixedAgent(high=500, low=200, jail=50), player_id='000'))
         players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='000'))
         players.append(Player(policy=FixedAgent(high=350, low=150, jail=100), player_id='111'))
-        shuffle(players)
+        # shuffle(players)
 
         game = Game(players=players)
 
@@ -54,6 +53,7 @@ def main():
             game.update_round()
 
             for player in game.players:
+                print('\n\n\n-----------PLAYER {}-----------'.format(player.index))
 
                 if player.is_bankrupt:            # must change it. do it two times because some players can go bankrupt when must pay bank interest
                     game.remove_player(player)    # other player's mortgaged spaces
@@ -104,6 +104,19 @@ def main():
                         continue
 
                     player.show()
+                    state = game.get_state(player)
+                    print('----------STATE---------')
+                    print('player_makes', 'opponents_make', 'player_owns', 'opponents_own')
+                    counter = 0
+                    for i in range(0, len(state) - 3, 4):
+                        print('{:12} {}'.format(config.monopolies[counter], state[i:i + 4]))
+                        counter += 1
+                    print('Position:', state[40])
+                    print('Properties value:', state[41])
+                    print('Money:', state[42])
+                    print('----------REWARD---------')
+                    reward = game.get_reward(player, state)
+                    print('Reward:', reward)
                     # end turn
                     break
 

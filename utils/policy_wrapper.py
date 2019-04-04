@@ -2,17 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from policies.mlp import MLP
-from utils.distributions import Categorical, DiagGaussian
+from utils.distributions import DiagGaussian
 
 class Policy(nn.Module):
-    def __init__(self, obs_shape, action_space):
+    def __init__(self, obs_shape, action_shape):
         super(Policy, self).__init__()
 
         self.base = MLP(obs_shape)
-
-        n_outputs = action_space.n
-        self.dist_layer = Categorical(self.base.output_size, n_outputs)
-
+        self.dist_layer = DiagGaussian(self.base.output_size, action_shape)
 
     def forward(self, *args):
          raise NotImplementedError
