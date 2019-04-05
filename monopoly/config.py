@@ -34,5 +34,5 @@ monopolies = ('Brown', 'Light Blue', 'Pink',
             'Orange', 'Red', 'Yellow', 'Green', 'Dark Blue', 'Railroad', 'Utility') # monopoly order for state
 
 
-# action_space = 115
+action_space = 60
 state_space = 43

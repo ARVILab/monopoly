@@ -211,7 +211,8 @@ class Game:
         p = self.players_left
         m = self.get_money(player, opponents)
         print('v = {}, p = {}, m = {}'.format(v, p, m))
-        reward = ((v / p) * c) / (1 + np.abs(v / p * c)) + m / p
+        vpc = np.abs(v / p * c)
+        reward = (vpc / (1 + vpc) + m / p
         return np.round(reward, 5)
 
     def get_make_delta(self, state):  # returns difference between what player makes from his properties

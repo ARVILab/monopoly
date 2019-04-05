@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from utils.weights_init import init, init_normc_
 
 class MLP(nn.Module):
@@ -36,5 +38,6 @@ class MLP(nn.Module):
 
     def forward(self, x):
         value = self.critic(x)
-        action = self.actor(x)
+        action_distrib = self.actor(x)
+        action = F.softmax(action_distrib, dim=1)
         return value, action

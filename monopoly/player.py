@@ -1,12 +1,13 @@
 from . import config
 import numpy as np
 import logging
+from storage import Storage
 
 logger = logging.getLogger(__name__)
 
 class Player:
 
-    def __init__(self, policy=None, player_id=None):
+    def __init__(self, policy=None, player_id=None, device=None):
 
         self.id = player_id             # Identification number
         self.index = 0
@@ -18,7 +19,8 @@ class Player:
         self.is_bankrupt = False        # Bankrupt status
 
         self.policy = policy
-        self.storage = None
+        self.storage = Storage(5000, config.state_space, config.action_space)
+        self.device = device
 
         self.obligatory_acts = {
             'Idle': None,
@@ -133,10 +135,20 @@ class Player:
         action_mask = self.get_action_mask(mask_params)
         if self.have_enough_money(space.price):
             action_mask[1 + space.position_in_action] = 1.
+        action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+
         state = self.game.get_state(self)
-        action = self.policy.act(state, self.cash)
-        action = self.apply_mask(action, action_mask)
+        value, action, action_log_prob = self.policy.act(state, self.cash)
+        action = self.apply_mask(action, action_mask_gpu)
+        action_log_prob = self.apply_mask(action, action_mask_gpu)
+
         do_nothing = self.apply_action(action)
+
+        next_state = self.game.get_state(self)
+        reward = self.game.get_reward(self, next_state)
+
+        self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
+
         if do_nothing:
             self.game.auction(self, space)
 
@@ -149,19 +161,42 @@ class Player:
     def jail_strategy(self, dice=None):
         mask_params = [False, False, True, False]
         action_mask = self.get_action_mask(mask_params)
+        action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+
         state = self.game.get_state(self)
-        action = self.policy.jail_policy(state, self.cash)
-        action = self.apply_mask(action, action_mask)
+        value, action, action_log_prob = self.policy.jail_policy(state, self.cash)
+        action = self.apply_mask(action, action_mask_gpu)
+        action_log_prob = self.apply_mask(action, action_mask_gpu)
+
         do_nothing = self.apply_action(action) # here if do_nothing is False it means that he neither paid nor used the card
         if do_nothing:
             if dice:
                 if dice.double:
+
                     if config.verbose['double_leave_jail']:
                         logger.info('Player {} got double. Leave jail.'.format(self.id))
+
+                    next_state = self.game.get_state(self)
+                    next_state[40] = (self.position + dice.roll_sum) / 39
+                    reward = self.game.get_reward(self, next_state)
+
+                    self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
                     return False # means not staying in jail
+
             if config.verbose['stay_in_jail']:
                 logger.info('Player {} stays in jail.'.format(self.id))
+
+            next_state = self.game.get_state(self)
+            reward = self.game.get_reward(self, next_state)
+
+            self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
             return True # staying in jail
+
+        next_state = self.game.get_state(self)
+        next_state[40] = (self.position + dice.roll_sum) / 39
+        reward = self.game.get_reward(self, next_state)
+
+        self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
         return False # means he paid or used card
 
 
@@ -173,10 +208,21 @@ class Player:
         while True:
             mask_params = [True, True, False, False]
             action_mask = self.get_action_mask(mask_params)
+            action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+
             state = self.game.get_state(self)
-            action = self.policy.act(state, self.cash)
-            action = self.apply_mask(action, action_mask)
+            value, action, action_log_prob = self.policy.act(state, self.cash)
+
+            action = self.apply_mask(action, action_mask_gpu)
+            action_log_prob = self.apply_mask(action, action_mask_gpu)
+
             do_nothing = self.apply_action(action)
+
+            next_state = self.game.get_state(self)
+            reward = self.game.get_reward(self, next_state)
+
+            self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
+
             if do_nothing:
                 break
 
@@ -197,7 +243,8 @@ class Player:
         elif action_index == 58:      # using the card
             pass
         elif action_index == 59:
-            self.trade()
+            # self.trade()
+            pass
         return False
 
 
@@ -297,7 +344,6 @@ class Player:
             logger.info('{space_name} is mortgaged now. Player {id} gets {mortg_money} money. Player {id} has {money}'.format(space_name=space.name, id=self.id,
                                                                                                                     mortg_money=space.price_mortgage, money=self.cash))
 
-
     def get_space_by_action_index(self, action_index):
         for space in self.game.board:
             if action_index == space.position_in_action:
@@ -305,7 +351,7 @@ class Player:
         return None
 
     def apply_mask(self, action, mask):
-        return np.array(action) * np.array(mask)
+        return action * mask
 
     def can_build_on_monopoly(self, monopoly):
         for space in monopoly:
@@ -547,8 +593,8 @@ class Player:
                         action_mask = creditor.get_action_mask(mask_params)
                         if creditor.can_unmortgage(space):
                             action_mask[space.position_in_action] = 1.
-                        state = self.game.get_state(creditor)
-                        action = creditor.policy.act(state, self.cash)
+                        state = creditor.game.get_state(creditor)
+                        action = creditor.policy.act(state, creditor.cash)
                         action = creditor.apply_mask(action, action_mask)
                         do_nothing = creditor.apply_action(action)
                     creditor.update_rent(space)
@@ -564,6 +610,7 @@ class Player:
         self.jail_cards = 0
         self.properties = {}
         self.is_bankrupt = True
+        self.storage.masks[-1].copy_([1.0])
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
@@ -588,10 +635,20 @@ class Player:
         while True:
             mask_params = [False, True, False, False]
             action_mask = self.get_action_mask(mask_params)
+            action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+
             state = self.game.get_state(self)
-            action = self.policy.act(state, self.cash)
-            action = self.apply_mask(action, action_mask)
+            value, action, action_log_prob = self.policy.act(state, self.cash)
+
+            action = self.apply_mask(action, action_mask_gpu)
+            action_log_prob = self.apply_mask(action, action_mask_gpu)
+
             do_nothing = self.apply_action(action)
+
+            next_state = self.game.get_state(self)
+            reward = self.game.get_reward(self, next_state)
+
+            self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
             if do_nothing:
                 break
 

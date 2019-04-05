@@ -2,6 +2,8 @@ from random import shuffle
 import sys
 import logging
 
+import torch
+
 from policies.random import RandomAgent
 from policies.fixed import FixedAgent
 from monopoly.player import Player
@@ -13,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 n_games = 1   # games are basically episodes
-n_rounds = 100  # and rounds are steps
+n_rounds = 2  # and rounds are steps
 
 # TODO: add better logging and more statistics
 
-
 def main():
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # win_stats = {str(i): 0 for i in range(config.n_players)}
     # win_stats['000'] = 0
     # win_stats['111'] = 0
@@ -35,14 +37,18 @@ def main():
         # players = [Player(policy=RandomAgent(), player_id=i) for i in range(config.n_players)]
         players = []
         # players.append(Player(policy=FixedAgent(high=500, low=200, jail=50), player_id='000'))
-        players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='000'))
-        players.append(Player(policy=FixedAgent(high=350, low=150, jail=100), player_id='111'))
+        players.append(Player(policy=FixedAgent(high=400, low=200, jail=100), player_id='000', device=device))
+        players.append(Player(policy=FixedAgent(high=350, low=150, jail=100), player_id='111', device=device))
         # shuffle(players)
 
         game = Game(players=players)
 
+
         for player in players:
             player.set_game(game)
+
+        storage.add_obs(game.get_state(players[0]), step=0)
+        storage.to(device)
 
         for n_round in range(n_rounds):
 
@@ -140,6 +146,8 @@ def main():
             for i, player in enumerate(game.lost_players):
                 print('Player {} is on the {} place '.format(player.id, i + 2))
                 player.show()
+
+        players[0].storage.show()
 
     for key in win_stats:
         print('Player {} won {} / {}'.format(key, win_stats[key], n_games))
