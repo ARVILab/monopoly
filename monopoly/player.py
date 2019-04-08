@@ -49,6 +49,10 @@ class Player:
 
     def set_game(self, game):
         self.game = game
+        obs = self.game.get_state(self)
+        obs = torch.from_numpy(obs).float().to(self.device)
+        self.storage.add_obs(obs, step=0)
+        self.storage.to(self.device)
 
     def act(self, space):
         space_type = space.get_type()

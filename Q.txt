@@ -3,4 +3,4 @@
 8. Must add finite amount of houses and hotels.
 9. Play with house rule 'full auction monopoly'.
 
-10. Should I somehow add opponents' actions? So that the agents know why stated has changed?
+10. Should I somehow add opponents' actions? So that the agents know why state has changed?

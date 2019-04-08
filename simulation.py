@@ -43,12 +43,8 @@ def main():
 
         game = Game(players=players)
 
-
         for player in players:
             player.set_game(game)
-
-        storage.add_obs(game.get_state(players[0]), step=0)
-        storage.to(device)
 
         for n_round in range(n_rounds):
 

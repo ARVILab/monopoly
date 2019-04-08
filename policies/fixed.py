@@ -17,7 +17,9 @@ class FixedAgent(object):
                 action[i] = 1
         else:
             action[0] = 1
-        return action
+
+        torch.from_numpy(obs).float().to(self.device)
+        return value, action, action_log_prob
 
     def auction_policy(self, max_bid, org_price, obs, cash):
         if max_bid >= org_price * 2:

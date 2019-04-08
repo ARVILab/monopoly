@@ -8,7 +8,7 @@ def _flatten_helper(T, N, _tensor):
 
 class Storage(object):
     def __init__(self, n_steps, obs_shape, action_space):
-        self.obs = torch.zeros(n_steps + 1, 1, *obs_shape)
+        self.obs = torch.zeros(n_steps + 1, 1, obs_shape)
         self.rewards = torch.zeros(n_steps, 1, 1)
         self.value_preds = torch.zeros(n_steps + 1, 1, 1)
         self.returns = torch.zeros(n_steps + 1, 1, 1)
@@ -83,3 +83,11 @@ class Storage(object):
                 value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
     def show(self):
+        print('------------STORAGE------------')
+        for i in range(len(counter)):
+            print('OBS:', self.obs[i])
+            print('ACTIONS:', self.actions[i])
+            print('LOG PROBS:', self.action_log_probs[i])
+            print('VALUES:', self.value_preds[i])
+            print('REWARDS:', self.rewards[i])
+            print('MASKS:', self.masks[i])
