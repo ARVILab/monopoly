@@ -10,7 +10,7 @@ class Policy(nn.Module):
 
         self.base = MLP(obs_shape)
 
-        self.dist_layer = Categorical(self.base.output_size, action_shape)
+        self.dist_layer = DiagGaussian(self.base.output_size, action_shape)
 
 
     def forward(self, *args):

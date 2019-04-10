@@ -2,6 +2,7 @@ from . import config
 import numpy as np
 import logging
 from storage import Storage
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,7 @@ class Player:
     def set_game(self, game):
         self.game = game
         obs = self.game.get_state(self)
-        obs = torch.from_numpy(obs).float().to(self.device)
-        self.storage.add_obs(obs, step=0)
+        self.storage.add_init_obs(obs, step=0)
         self.storage.to(self.device)
 
     def act(self, space):
@@ -138,15 +138,14 @@ class Player:
         mask_params = [False, False, False, False]
         action_mask = self.get_action_mask(mask_params)
         if self.have_enough_money(space.price):
-            action_mask[1 + space.position_in_action] = 1.
-        action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+            action_mask[space.position_in_action + 1] = 1.
+        action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
         state = self.game.get_state(self)
         value, action, action_log_prob = self.policy.act(state, self.cash)
-        action = self.apply_mask(action, action_mask_gpu)
-        action_log_prob = self.apply_mask(action, action_mask_gpu)
+        action_masked = self.apply_mask(action, action_mask_gpu)
 
-        do_nothing = self.apply_action(action)
+        do_nothing = self.apply_action(action_masked)
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
@@ -155,6 +154,15 @@ class Player:
 
         if do_nothing:
             self.game.auction(self, space)
+
+            state = self.game.get_state(self)
+            reward = self.game.get_reward(self, state)
+
+            action = torch.FloatTensor([0.0] * config.action_space)
+            action_log_prob = torch.FloatTensor([0.0])
+            value = torch.FloatTensor([0.0])
+
+            self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
         do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
@@ -165,14 +173,13 @@ class Player:
     def jail_strategy(self, dice=None):
         mask_params = [False, False, True, False]
         action_mask = self.get_action_mask(mask_params)
-        action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+        action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
         state = self.game.get_state(self)
         value, action, action_log_prob = self.policy.jail_policy(state, self.cash)
-        action = self.apply_mask(action, action_mask_gpu)
-        action_log_prob = self.apply_mask(action, action_mask_gpu)
+        action_masked = self.apply_mask(action, action_mask_gpu)
 
-        do_nothing = self.apply_action(action) # here if do_nothing is False it means that he neither paid nor used the card
+        do_nothing = self.apply_action(action_masked)
         if do_nothing:
             if dice:
                 if dice.double:
@@ -181,7 +188,6 @@ class Player:
                         logger.info('Player {} got double. Leave jail.'.format(self.id))
 
                     next_state = self.game.get_state(self)
-                    next_state[40] = (self.position + dice.roll_sum) / 39
                     reward = self.game.get_reward(self, next_state)
 
                     self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
@@ -197,7 +203,6 @@ class Player:
             return True # staying in jail
 
         next_state = self.game.get_state(self)
-        next_state[40] = (self.position + dice.roll_sum) / 39
         reward = self.game.get_reward(self, next_state)
 
         self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
@@ -212,15 +217,14 @@ class Player:
         while True:
             mask_params = [True, True, False, False]
             action_mask = self.get_action_mask(mask_params)
-            action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+            action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
             state = self.game.get_state(self)
             value, action, action_log_prob = self.policy.act(state, self.cash)
 
-            action = self.apply_mask(action, action_mask_gpu)
-            action_log_prob = self.apply_mask(action, action_mask_gpu)
+            action_masked = self.apply_mask(action, action_mask_gpu)
 
-            do_nothing = self.apply_action(action)
+            do_nothing = self.apply_action(action_masked)
 
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
@@ -231,7 +235,7 @@ class Player:
                 break
 
     def apply_action(self, action):
-        action_index = action.argmax()
+        action_index = action[0].argmax().item()
 
         # don't like it. must change it
         if action_index == 0:
@@ -521,6 +525,8 @@ class Player:
 
     def update_rent(self, space):
 
+        if space.monopoly not in self.properties:
+            print('aa')
         monopoly = self.properties[space.monopoly]
         n_owned = len(monopoly)
 
@@ -595,12 +601,24 @@ class Player:
                             break
                         mask_params = [False, False, False, False]
                         action_mask = creditor.get_action_mask(mask_params)
+
                         if creditor.can_unmortgage(space):
-                            action_mask[space.position_in_action] = 1.
+                            action_mask[space.position_in_action + 1] = 1.
+                        action_mask_gpu = torch.FloatTensor(action_mask).to(creditor.device)
+
                         state = creditor.game.get_state(creditor)
-                        action = creditor.policy.act(state, creditor.cash)
-                        action = creditor.apply_mask(action, action_mask)
-                        do_nothing = creditor.apply_action(action)
+                        value, action, action_log_prob = creditor.policy.act(state, creditor.cash)
+                        action_masked = creditor.apply_mask(action, action_mask_gpu)
+
+                        if space.monopoly not in creditor.properties:
+                            print('here')
+
+                        do_nothing = creditor.apply_action(action_masked)
+
+                        next_state = creditor.game.get_state(creditor)
+                        reward = creditor.game.get_reward(creditor, next_state)
+
+                        creditor.storage.insert(state, action, action_log_prob, value, reward, [1.0])
                     creditor.update_rent(space)
                 if went_bankrupt:
                     break
@@ -614,7 +632,16 @@ class Player:
         self.jail_cards = 0
         self.properties = {}
         self.is_bankrupt = True
-        self.storage.masks[-1].copy_([1.0])
+        self.position = 0
+
+        state = self.game.get_state(self)
+
+        reward = torch.FloatTensor([0.0])
+        action = torch.FloatTensor([0.0] * config.action_space)
+        action_log_prob = torch.FloatTensor([0.0])
+        value = torch.FloatTensor([0.0])
+
+        self.storage.insert(state, action, action_log_prob, value, reward, [0.0])
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
@@ -639,15 +666,14 @@ class Player:
         while True:
             mask_params = [False, True, False, False]
             action_mask = self.get_action_mask(mask_params)
-            action_mask_gpu = torch.FloatTensor(action_mask).to(device)
+            action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
             state = self.game.get_state(self)
             value, action, action_log_prob = self.policy.act(state, self.cash)
 
-            action = self.apply_mask(action, action_mask_gpu)
-            action_log_prob = self.apply_mask(action, action_mask_gpu)
+            action_masked = self.apply_mask(action, action_mask_gpu)
 
-            do_nothing = self.apply_action(action)
+            do_nothing = self.apply_action(action_masked)
 
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)

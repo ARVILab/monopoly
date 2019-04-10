@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
+import torch
 
 from . import config
 from . import bank
@@ -16,6 +17,8 @@ class Game:
         self.players = players
         self.bank = bank.Bank()
         self.board = []
+
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         self.dice = None
 
@@ -152,7 +155,8 @@ class Game:
 
         state.extend([position, properties_value, money])
 
-        return np.array(state)
+        state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
+        return state
 
     def get_properties_state(self, player, opponents):
         properties_state = []
@@ -205,15 +209,17 @@ class Game:
         return np.round(player.cash / all_money, 3)
 
     def get_reward(self, player, state, c=0.01):
+
+        state_tmp = state.squeeze(0)
         opponents = self.get_opponents(player)
 
-        v = self.get_make_delta(state)
+        v = self.get_make_delta(state_tmp)
         p = self.players_left
         m = self.get_money(player, opponents)
-        print('v = {}, p = {}, m = {}'.format(v, p, m))
         vpc = np.abs(v / p * c)
         reward = vpc / (1 + vpc) + m / p
-        return np.round(reward, 5)
+        reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
+        return reward
 
     def get_make_delta(self, state):  # returns difference between what player makes from his properties
         agent_makes = 0                # and what opponents make from their properties
@@ -221,8 +227,7 @@ class Game:
         for i in range(0, config.state_space - 3, 4):
             agent_makes += state[i]
             opponents_make += state[i + 1]
-        delta = np.round(agent_makes - opponents_make, 5)
-        print('Agent makes {}, opps make {}, diff {}'.format(agent_makes, opponents_make, delta))
+        delta = np.round(agent_makes.item() - opponents_make.item(), 5)
         return delta
 
 

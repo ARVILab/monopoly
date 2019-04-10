@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 class FixedAgent(object):
 
@@ -6,8 +7,9 @@ class FixedAgent(object):
         self.high = high
         self.low = low
         self.jail = jail
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    def act(self, obs, cash):
+    def act(self, state, cash):
         action = np.zeros(60)
         if cash >= self.high:
             for i in range(1, 29):
@@ -18,8 +20,10 @@ class FixedAgent(object):
         else:
             action[0] = 1
 
-        torch.from_numpy(obs).float().to(self.device)
-        return value, action, action_log_prob
+        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
+        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        return value, action, log_prob
 
     def auction_policy(self, max_bid, org_price, obs, cash):
         if max_bid >= org_price * 2:
@@ -37,4 +41,7 @@ class FixedAgent(object):
             action[57] = 1
         else:
             action[0] = 1
-        return action
+        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
+        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        return value, action, log_prob

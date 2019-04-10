@@ -7,25 +7,26 @@ def _flatten_helper(T, N, _tensor):
 
 
 class Storage(object):
-    def __init__(self, n_steps, obs_shape, action_space):
+    def __init__(self, n_steps, obs_shape, action_shape):
         self.obs = torch.zeros(n_steps + 1, 1, obs_shape)
         self.rewards = torch.zeros(n_steps, 1, 1)
         self.value_preds = torch.zeros(n_steps + 1, 1, 1)
         self.returns = torch.zeros(n_steps + 1, 1, 1)
         self.action_log_probs = torch.zeros(n_steps, 1, 1)
 
-        action_shape = 1
         self.actions = torch.zeros(n_steps, 1, action_shape)
 
-        self.actions = self.actions.long()
-        self.masks = torch.ones(n_steps + 1, 1, 1)
+        self.masks = torch.zeros(n_steps + 1, 1, 1)
 
         self.n_steps = n_steps
         self.step = 0
         self.counter = 0
 
-    def add_obs(self, obs, step=0):
+    def add_init_obs(self, obs, step=0):
         self.obs[step].copy_(obs)
+        self.masks[step].copy_(torch.FloatTensor([1.0]))
+        self.step += 1
+        self.counter += 1
 
     def to(self, device):
         self.obs = self.obs.to(device)
@@ -37,16 +38,18 @@ class Storage(object):
         self.masks = self.masks.to(device)
 
     def insert(self, obs, actions, action_log_probs, value_preds, rewards, masks):
-        self.obs[self.step + 1].copy_(obs)
+        self.obs[self.step].copy_(obs)
         self.actions[self.step].copy_(actions)
         self.action_log_probs[self.step].copy_(action_log_probs)
         self.value_preds[self.step].copy_(value_preds)
         self.rewards[self.step].copy_(rewards)
-        self.masks[self.step + 1].copy_(masks)
+        self.masks[self.step].copy_(torch.FloatTensor(masks))
 
         self.step = (self.step + 1) % self.n_steps
 
         self.counter += 1
+
+        # self.show_last_step()
 
     def after_update(self):
         self.obs[0].copy_(self.obs[-1])
@@ -83,11 +86,23 @@ class Storage(object):
                 value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
     def show(self):
-        print('------------STORAGE------------')
-        for i in range(len(counter)):
+        print('------------STORAGE {}------------'.format(self.counter))
+        for i in range(self.counter):
+            print('--------STEP {}--------'.format(i))
             print('OBS:', self.obs[i])
             print('ACTIONS:', self.actions[i])
             print('LOG PROBS:', self.action_log_probs[i])
             print('VALUES:', self.value_preds[i])
             print('REWARDS:', self.rewards[i])
             print('MASKS:', self.masks[i])
+
+    def show_last_step(self):
+        print('------------STORAGE LAST STEP------------')
+        last_step = self.step - 1 if self.step > 1 else 0
+        print('--------STEP {}--------'.format(last_step))
+        print('OBS:', self.obs[last_step])
+        print('ACTIONS:', self.actions[last_step])
+        print('LOG PROBS:', self.action_log_probs[last_step])
+        print('VALUES:', self.value_preds[last_step])
+        print('REWARDS:', self.rewards[last_step])
+        print('MASKS:', self.masks[last_step])
