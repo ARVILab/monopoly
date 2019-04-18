@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+import config
+
 
 class FixedAgent(object):
 
@@ -7,25 +9,31 @@ class FixedAgent(object):
         self.high = high
         self.low = low
         self.jail = jail
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = config.device
 
-    def act(self, state, cash):
-        action = np.zeros(60)
+    def act(self, state, cash, mask):
+        actions = np.zeros(60)
         if cash >= self.high:
             for i in range(1, 29):
-                action[i] = 1
+                actions[i] = 1
         elif cash <= self.low:
             for i in range(29, 57):
-                action[i] = 1
+                actions[i] = 1
         else:
-            action[0] = 1
+            actions[0] = 1
 
-        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
+        actions = actions * mask.cpu().numpy()
+
+        action = np.array([actions.argmax()])
+        if action == 59:
+            action = 0
+
+        action = torch.from_numpy(np.array(action)).float().to(self.device).view(1, -1)
         value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
         log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
         return value, action, log_prob
 
-    def auction_policy(self, max_bid, org_price, obs, cash):
+    def auction_policy(self, max_bid, org_price, state, cash):
         if max_bid >= org_price * 2:
             return True, 0
 
@@ -35,13 +43,24 @@ class FixedAgent(object):
 
         return True, 0
 
-    def jail_policy(self, state, cash):   # need info about amount of card available
-        action = np.zeros(60)
+    def jail_policy(self, state, cash, mask):   # need info about amount of card available
+        actions = np.zeros(60)
         if cash >= self.jail:
-            action[57] = 1
+            actions[57] = 1
         else:
-            action[0] = 1
+            actions[0] = 1
+
+        actions = actions * mask.cpu().numpy()
+
+        action = np.array([actions.argmax()])
+        if action == 59:
+            action = 0
+
         action = torch.from_numpy(action).float().to(self.device).view(1, -1)
         value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
         log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
         return value, action, log_prob
+
+    def get_value(self):
+        value = torch.from_numpy(np.array([12.])).float().to(self.device).view(1, -1)
+        return value

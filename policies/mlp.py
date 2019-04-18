@@ -8,7 +8,7 @@ class MLP(nn.Module):
     def __init__(self, obs_shape, hidden_size=128):
         super(MLP, self).__init__()
 
-        self.n_inputs = obs_shape[0]
+        self.n_inputs = obs_shape
         self._hidden_size = hidden_size
 
         init_ = lambda m: init(m,
@@ -30,7 +30,7 @@ class MLP(nn.Module):
             init_(nn.Linear(hidden_size, 1))
         )
 
-        # self.train()
+        self.train()
 
     @property
     def output_size(self):

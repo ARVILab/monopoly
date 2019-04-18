@@ -4,3 +4,4 @@
 9. Play with house rule 'full auction monopoly'.
 
 10. Should I somehow add opponents' actions? So that the agents know why state has changed?
+

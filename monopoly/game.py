@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import torch
 
-from . import config
+import config
 from . import bank
 from . import spaces
 from . import dice
@@ -18,7 +18,7 @@ class Game:
         self.bank = bank.Bank()
         self.board = []
 
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = config.device
 
         self.dice = None
 
@@ -34,7 +34,7 @@ class Game:
         self.players_left = len(self.players)
         self.update_player_indexes()
 
-        logger.info('Player {} was removed from game. Players left {}'.format(loser.id, self.players_left))
+        # logger.info('Player {} was removed from game. Players left {}'.format(loser.id, self.players_left))
 
     def update_player_indexes(self):
         for i in range(self.players_left):
@@ -206,7 +206,8 @@ class Game:
 
     def get_money(self, player, opponents):
         all_money = sum([opp.cash for opp in opponents]) + player.cash
-        return np.round(player.cash / all_money, 3)
+        money = 0. if all_money == 0 else np.round(player.cash / all_money, 3)
+        return money
 
     def get_reward(self, player, state, c=0.01):
 

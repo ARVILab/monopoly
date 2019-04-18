@@ -1,14 +1,15 @@
-from . import config
+import config
+from utils.storage import Storage
+
 import numpy as np
 import logging
-from storage import Storage
+
 import torch
 
 logger = logging.getLogger(__name__)
 
 class Player:
-
-    def __init__(self, policy=None, player_id=None, device=None):
+    def __init__(self, policy=None, player_id=None):
 
         self.id = player_id             # Identification number
         self.index = 0
@@ -20,8 +21,8 @@ class Player:
         self.is_bankrupt = False        # Bankrupt status
 
         self.policy = policy
-        self.storage = Storage(5000, config.state_space, config.action_space)
-        self.device = device
+        self.storage = Storage(2000, config.state_space, config.action_space)
+        self.device = config.device
 
         self.obligatory_acts = {
             'Idle': None,
@@ -130,7 +131,7 @@ class Player:
         self.position = 10
         self.jail_turns = 3 # because he leaves jail on the third move
 
-        logger.info('Player {id} went to jail'.format(id=self.id))
+        # logger.info('Player {id} went to jail'.format(id=self.id))
 
         self.jail_strategy()
 
@@ -142,27 +143,17 @@ class Player:
         action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
         state = self.game.get_state(self)
-        value, action, action_log_prob = self.policy.act(state, self.cash)
-        action_masked = self.apply_mask(action, action_mask_gpu)
+        value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-        do_nothing = self.apply_action(action_masked)
+        do_nothing = self.apply_action(action)
+
+        if do_nothing:
+            self.game.auction(self, space)
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
         self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
-
-        if do_nothing:
-            self.game.auction(self, space)
-
-            state = self.game.get_state(self)
-            reward = self.game.get_reward(self, state)
-
-            action = torch.FloatTensor([0.0] * config.action_space)
-            action_log_prob = torch.FloatTensor([0.0])
-            value = torch.FloatTensor([0.0])
-
-            self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
         do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
@@ -176,10 +167,9 @@ class Player:
         action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
         state = self.game.get_state(self)
-        value, action, action_log_prob = self.policy.jail_policy(state, self.cash)
-        action_masked = self.apply_mask(action, action_mask_gpu)
+        value, action, action_log_prob = self.policy.jail_policy(state, self.cash, action_mask_gpu)
 
-        do_nothing = self.apply_action(action_masked)
+        do_nothing = self.apply_action(action)
         if do_nothing:
             if dice:
                 if dice.double:
@@ -220,11 +210,9 @@ class Player:
             action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
             state = self.game.get_state(self)
-            value, action, action_log_prob = self.policy.act(state, self.cash)
+            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-            action_masked = self.apply_mask(action, action_mask_gpu)
-
-            do_nothing = self.apply_action(action_masked)
+            do_nothing = self.apply_action(action)
 
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
@@ -235,22 +223,20 @@ class Player:
                 break
 
     def apply_action(self, action):
-        action_index = action[0].argmax().item()
-
-        # don't like it. must change it
-        if action_index == 0:
+        action_item = action.item()
+        if action_item == 0:
             return True # do nothing
-        elif action_index > 0 and action_index < 29:
-            target = action_index - 1
+        elif action_item > 0 and action_item < 29:
+            target = action_item - 1
             self.spend_money(target)
-        elif action_index > 28 and action_index < 57:
-            target = action_index - 29
+        elif action_item > 28 and action_item < 57:
+            target = action_item - 29
             self.make_money(target)
-        elif action_index == 57:
+        elif action_item == 57:
             self.pay_to_leave_jail()
-        elif action_index == 58:      # using the card
+        elif action_item == 58:      # using the card
             pass
-        elif action_index == 59:
+        elif action_item == 59:
             # self.trade()
             pass
         return False
@@ -266,12 +252,13 @@ class Player:
         if self.can_buy_space(space):
             self.buy(space)
         elif self.can_unmortgage(space):
-            price = space.price_mortgage + space.price * 0.1
-            # logger.info('Can unmortgage. Player {id} have money {cash}. Need money {price}'.format(
-            #     id=self.id,
-            #     cash=self.cash,
-            #     price=price
-            # ))
+            if config.verbose['unmortgage_ability']:
+                price = space.price_mortgage + space.price * 0.1
+                logger.info('Can unmortgage. Player {id} have money {cash}. Need money {price}'.format(
+                    id=self.id,
+                    cash=self.cash,
+                    price=price
+                ))
             self.unmortgage(space)
         elif self.can_build_on_monopoly(monopoly):
             if self.can_build_on_space(space, monopoly):
@@ -305,7 +292,7 @@ class Player:
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
-                logger.info('Could not pay for leaving jail after 3 move. Went bankrupt.')
+                # logger.info('Could not pay for leaving jail after 3 move. Went bankrupt.')
                 self.go_bankrupt()
 
 
@@ -358,8 +345,6 @@ class Player:
                 return space
         return None
 
-    def apply_mask(self, action, mask):
-        return action * mask
 
     def can_build_on_monopoly(self, monopoly):
         for space in monopoly:
@@ -483,13 +468,14 @@ class Player:
                     if self.have_enough_money(money_owned):
                         self.pay(money_owned, space.owner)
                     else:
-                        logger.info(
-                            'Player {id2} could not pay Player {id1} a rent on space {name}. Player {id2} has {cash} but need {rent}'.format(
-                                id1=space.owner.id,
-                                name=space.name,
-                                id2=self.id,
-                                cash=self.cash,
-                                rent=space.current_rent))
+                        if config.verbose['before_bankrupt']:
+                            logger.info(
+                                'Player {id2} could not pay Player {id1} a rent on space {name}. Player {id2} has {cash} but need {rent}'.format(
+                                    id1=space.owner.id,
+                                    name=space.name,
+                                    id2=self.id,
+                                    cash=self.cash,
+                                    rent=space.current_rent))
                         self.go_bankrupt(space.owner)
             else:
                 if config.verbose['on_mortgaged_property']:
@@ -513,20 +499,18 @@ class Player:
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
-                logger.info(
-                    'Player {id} could not pay tax. Player {id} has {cash} but need {tax}'.format(
-                        id=self.id,
-                        cash=self.cash,
-                        tax=money_owned))
+                if config.verbose['cant_pay_tax']:
+                    logger.info(
+                        'Player {id} could not pay tax. Player {id} has {cash} but need {tax}'.format(
+                            id=self.id,
+                            cash=self.cash,
+                            tax=money_owned))
                 self.go_bankrupt()
 
     def count_mortgaged(self, monopoly):
         return len([space for space in monopoly if space.is_mortgaged])
 
     def update_rent(self, space):
-
-        if space.monopoly not in self.properties:
-            print('aa')
         monopoly = self.properties[space.monopoly]
         n_owned = len(monopoly)
 
@@ -592,8 +576,10 @@ class Player:
                         creditor.properties[space.monopoly] = []
                     creditor.properties[space.monopoly].append(space)
                     space.owner = creditor
+
                     if config.verbose['new_owner']:
                         logger.info('Player {} is the new owner of space {}'.format(creditor.id, space.name))
+
                     if space.is_mortgaged:
                         creditor.pay_bank_interest(space)
                         if creditor.is_bankrupt:
@@ -607,13 +593,9 @@ class Player:
                         action_mask_gpu = torch.FloatTensor(action_mask).to(creditor.device)
 
                         state = creditor.game.get_state(creditor)
-                        value, action, action_log_prob = creditor.policy.act(state, creditor.cash)
-                        action_masked = creditor.apply_mask(action, action_mask_gpu)
+                        value, action, action_log_prob = creditor.policy.act(state, creditor.cash, action_mask_gpu)
 
-                        if space.monopoly not in creditor.properties:
-                            print('here')
-
-                        do_nothing = creditor.apply_action(action_masked)
+                        do_nothing = creditor.apply_action(action)
 
                         next_state = creditor.game.get_state(creditor)
                         reward = creditor.game.get_reward(creditor, next_state)
@@ -637,7 +619,7 @@ class Player:
         state = self.game.get_state(self)
 
         reward = torch.FloatTensor([0.0])
-        action = torch.FloatTensor([0.0] * config.action_space)
+        action = torch.FloatTensor([0.0])
         action_log_prob = torch.FloatTensor([0.0])
         value = torch.FloatTensor([0.0])
 
@@ -652,12 +634,13 @@ class Player:
             if self.have_enough_money(bank_interest):
                 self.pay(bank_interest)
             else:
-                logger.info(
-                    'Player {id} could not bank interest for space {name}. Player {id} has {cash} but need {interest}'.format(
-                        id=self.id,
-                        cash=self.cash,
-                        name=space.name,
-                        interest=bank_interest))
+                if config.verbose['cant_pay_bank_interest']:
+                    logger.info(
+                        'Player {id} could not bank interest for space {name}. Player {id} has {cash} but need {interest}'.format(
+                            id=self.id,
+                            cash=self.cash,
+                            name=space.name,
+                            interest=bank_interest))
                 self.go_bankrupt()
 
     def try_to_survive(self):
@@ -669,11 +652,9 @@ class Player:
             action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
             state = self.game.get_state(self)
-            value, action, action_log_prob = self.policy.act(state, self.cash)
+            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-            action_masked = self.apply_mask(action, action_mask_gpu)
-
-            do_nothing = self.apply_action(action_masked)
+            do_nothing = self.apply_action(action)
 
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)

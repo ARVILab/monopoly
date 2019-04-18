@@ -1,8 +1,8 @@
 n_players = 3                  # Number of players
 
-board_filename = 'board.csv'              # Board filename
-chance_cards_filename = 'chance_cards.csv' # chance cards filename
-chest_cards_filename = 'chest_cards.csv'   # community chest cards filename
+board_filename = './data/board.csv'               # Board filename
+chance_cards_filename = './data/chance_cards.csv' # chance cards filename
+chest_cards_filename = './data/chest_cards.csv'   # community chest cards filename
 
 verbose = {'move': True,       # logging verbose
            'pay': True,
@@ -26,7 +26,16 @@ verbose = {'move': True,       # logging verbose
            'double_leave_jail': True,
            'pay_to_leave_jail': True,
            'sell_building': True,
-           'on_mortgaged_property': True}
+           'on_mortgaged_property': True,
+           'unmortgage_ability': True,
+           'player': True,
+           'player_properties': True,
+           'full_game_result': True,
+           'not_full_game_result': True,
+           'stats': True,
+           'before_bankrupt': True,
+           'cant_pay_tax': True,
+           'cant_pay_bank_interest': True}
 
 
 

@@ -8,13 +8,17 @@ def _flatten_helper(T, N, _tensor):
 
 class Storage(object):
     def __init__(self, n_steps, obs_shape, action_shape):
+        self.obs_shape = obs_shape
+        self.action_shape = action_shape
+
         self.obs = torch.zeros(n_steps + 1, 1, obs_shape)
         self.rewards = torch.zeros(n_steps, 1, 1)
         self.value_preds = torch.zeros(n_steps + 1, 1, 1)
         self.returns = torch.zeros(n_steps + 1, 1, 1)
         self.action_log_probs = torch.zeros(n_steps, 1, 1)
 
-        self.actions = torch.zeros(n_steps, 1, action_shape)
+        self.actions = torch.zeros(n_steps, 1, 1)
+        self.actions = self.actions.long()
 
         self.masks = torch.zeros(n_steps + 1, 1, 1)
 
@@ -27,6 +31,44 @@ class Storage(object):
         self.masks[step].copy_(torch.FloatTensor([1.0]))
         self.step += 1
         self.counter += 1
+
+    def truncate(self):
+        obs = torch.zeros(self.counter + 1, 1, self.obs_shape)
+        rewards = torch.zeros(self.counter, 1, 1)
+        value_preds = torch.zeros(self.counter + 1, 1, 1)
+        returns = torch.zeros(self.counter + 1, 1, 1)
+        action_log_probs = torch.zeros(self.counter, 1, 1)
+        actions = torch.zeros(self.counter, 1, 1)
+        masks = torch.zeros(self.counter + 1, 1, 1)
+
+        for step in range(self.counter):
+            obs[step].copy_(self.obs[step])
+            actions[step].copy_(self.actions[step])
+            action_log_probs[step].copy_(self.action_log_probs[step])
+            value_preds[step].copy_(self.value_preds[step])
+            rewards[step].copy_(self.rewards[step])
+            masks[step].copy_(self.masks[step])
+
+        self.obs = obs
+        self.rewards = rewards
+        self.value_preds = value_preds
+        self.returns = returns
+        self.action_log_probs = action_log_probs
+        self.actions = actions
+        self.actions = self.actions.long()
+        self.masks = masks
+
+        # print('------------STORAGE TRUNCATED------------')
+        # print('COUNTER:', self.counter)
+        # for i in range(self.obs.size(0) - 1):
+        #     print('--------STEP {}--------'.format(i))
+        #     print('OBS:', self.obs[i])
+        #     print('ACTIONS:', self.actions[i])
+        #     print('LOG PROBS:', self.action_log_probs[i])
+        #     print('VALUES:', self.value_preds[i])
+        #     print('REWARDS:', self.rewards[i])
+        #     print('MASKS:', self.masks[i])
+
 
     def to(self, device):
         self.obs = self.obs.to(device)
@@ -56,7 +98,7 @@ class Storage(object):
         self.masks[0].copy_(self.masks[-1])
 
     def compute_returns(self, next_value, gamma, tau):
-        self.value_preds[-1] = next_value
+        self.value_preds[-2] = next_value
         gae = 0
         for step in reversed(range(self.rewards.size(0))):
             delta = self.rewards[step] + gamma * self.value_preds[step + 1] * self.masks[step + 1] - self.value_preds[step]
@@ -64,13 +106,7 @@ class Storage(object):
             self.returns[step] = gae + self.value_preds[step]
 
     def feed_forward_generator(self, advantages, n_mini_batch):
-        n_steps, n_processes = self.rewards.size()[0:2]
-        batch_size = n_processes * n_steps
-        assert batch_size >= n_mini_batch, (
-            "PPO requires the number of processes ({}) "
-            "* number of steps ({}) = {} "
-            "to be greater than or equal to the number of PPO mini batches ({})."
-            "".format(n_processes, n_steps, n_processes * n_steps, n_mini_batch))
+        batch_size = self.counter
         mini_batch_size = batch_size // n_mini_batch
         sampler = BatchSampler(SubsetRandomSampler(range(batch_size)), mini_batch_size, drop_last=False)
         for indices in sampler:
@@ -87,7 +123,7 @@ class Storage(object):
 
     def show(self):
         print('------------STORAGE {}------------'.format(self.counter))
-        for i in range(self.counter):
+        for i in range(self.obs.size(0) - 1):
             print('--------STEP {}--------'.format(i))
             print('OBS:', self.obs[i])
             print('ACTIONS:', self.actions[i])
@@ -98,7 +134,8 @@ class Storage(object):
 
     def show_last_step(self):
         print('------------STORAGE LAST STEP------------')
-        last_step = self.step - 1 if self.step > 1 else 0
+        # last_step = self.counter - 1 if self.counter > 1 else 0
+        last_step = -1
         print('--------STEP {}--------'.format(last_step))
         print('OBS:', self.obs[last_step])
         print('ACTIONS:', self.actions[last_step])
