@@ -17,9 +17,10 @@ def main():
     print('device', config.device)
 
     policy = NNWrapper(config.state_space, config.action_space)
+    # policy = torch.load('./models/model-5.pt', map_location=lambda storage, loc: storage)
     policy.to(config.device)
 
-    trainer = Trainer(policy, n_episodes=100, n_games_per_eps=2, n_rounds=2000, n_eval_games=50, verbose_eval=5, checkpoint_step=5, reset_files=True)
+    trainer = Trainer(policy, n_episodes=100, n_games_per_eps=10, n_rounds=2000, n_eval_games=20, verbose_eval=5, checkpoint_step=5, reset_files=True)
     start = datetime.datetime.now()
     trainer.run()
     end = datetime.datetime.now()
@@ -51,15 +52,14 @@ def main():
     # print('Avg time for 50 games:', np.average(times))
 
     # print('ARENA')
-    # arena = Arena(n_games=1, verbose=1, n_rounds=100)
-    # # policy = torch.load('./models/model-5.pt', map_location=lambda storage, loc: storage)
-    # policy = torch.load('./models/model-5.pt')
+    # arena = Arena(n_games=1, verbose=1, n_rounds=2000)
+    # policy = torch.load('./models/model-10.pt', map_location=lambda storage, loc: storage)
+    # # policy = torch.load('./models/model-5.pt')
     # # policy = NNWrapper(config.state_space, config.action_space)
     # # policy.to(config.device)
-    #
     # policy.eval()
     # winrate = arena.fight(agent=policy, opponent=FixedAgent(high=350, low=150, jail=100))
-    # # winrate = arena.fight(agent=policy, opponent=RandomAgent())
+    # winrate = arena.fight(agent=policy, opponent=RandomAgent())
 
     # print('ARENA')
     # arena = Arena(n_games=1, verbose=1, n_rounds=2)

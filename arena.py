@@ -139,6 +139,23 @@ class Arena(object):
 
             # game.players[0].storage.show()
 
+            # p1 = game.players[0]
+            # p2 = game.lost_players[0]
+            # p1.storage.truncate()
+            # p2.storage.truncate()
+            # filename1 = 'rewards_' + p1.id + '.csv'
+            # filename2 = 'rewards_' + p2.id + '.csv'
+            #
+            # for r in p1.storage.rewards:
+            #     with open(filename1, 'a') as f:
+            #         f.write(str(r.item()) + '\n')
+            #
+            # for r in p2.storage.rewards:
+            #     with open(filename2, 'a') as f:
+            #         f.write(str(r.item()) + '\n')
+            #
+            # print(p1.id, p1.storage.counter, p2.id, p2.storage.counter)
+
 
         winrate_return = 0
         if config.verbose['stats']:

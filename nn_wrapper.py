@@ -11,8 +11,8 @@ class NNWrapper(nn.Module):
     def __init__(self, obs_shape, action_shape):
         super(NNWrapper, self).__init__()
 
-        self.base = ResNet(obs_shape, action_shape)
-        # self.base = MLP(obs_shape, action_shape)
+        # self.base = ResNet(obs_shape, action_shape)
+        self.base = MLP(obs_shape, action_shape)
 
         self.dist_layer = Categorical()
 
@@ -22,7 +22,7 @@ class NNWrapper(nn.Module):
 
     def act(self, state, cash, mask):
         value, action_features = self.base(state)
-        dist = self.dist_layer.act(action_features, mask=mask)
+        dist = self.dist_layer.act(action_features, mask=mask, money=cash)
 
         action = dist.sample()
 
@@ -58,7 +58,7 @@ class NNWrapper(nn.Module):
 
     def jail_policy(self, state, cash, mask):   # need info about amount of card available
         value, action_features = self.base(state)
-        dist = self.dist_layer.act(action_features, mask=mask)
+        dist = self.dist_layer.act(action_features, mask=mask, money=cash)
 
         action = dist.sample()
 

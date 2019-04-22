@@ -209,17 +209,26 @@ class Game:
         money = 0. if all_money == 0 else np.round(player.cash / all_money, 3)
         return money
 
-    def get_reward(self, player, state, c=0.01):
+    def get_reward(self, player, state, c=1):
 
         state_tmp = state.squeeze(0)
         opponents = self.get_opponents(player)
 
-        v = self.get_make_delta(state_tmp)
-        p = self.players_left
-        m = self.get_money(player, opponents)
-        vpc = np.abs(v / p * c)
-        reward = vpc / (1 + vpc) + m / p
+        # v = self.get_make_delta(state_tmp)
+        # p = self.players_left
+        # m = self.get_money(player, opponents)
+        # vpc = v / p * c
+        # reward = vpc / (1 + np.abs(vpc)) + m / p
+        player.compute_total_wealth()
+        reward = player.total_wealth / 15000
         reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
+        # if 'rl' in player.id:
+        #     with open('rewards_rl.csv', 'a') as f:
+        #         f.write(str(reward.item()) + '\n')
+        #
+        # if 'opp' in player.id:
+        #     with open('rewards_fixed.csv', 'a') as f:
+        #         f.write(str(reward.item()) + '\n')
         return reward
 
     def get_make_delta(self, state):  # returns difference between what player makes from his properties

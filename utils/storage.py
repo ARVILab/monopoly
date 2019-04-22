@@ -41,6 +41,7 @@ class Storage(object):
         actions = torch.zeros(self.counter, 1, 1)
         masks = torch.zeros(self.counter + 1, 1, 1)
 
+
         for step in range(self.counter):
             obs[step].copy_(self.obs[step])
             actions[step].copy_(self.actions[step])
@@ -69,12 +70,12 @@ class Storage(object):
         #     print('REWARDS:', self.rewards[i])
         #     print('MASKS:', self.masks[i])
 
-    # def obs_equals(self, elem1, elem2):
-    #     r = torch.all(torch.eq(elem1, elem2))
-    #     return r.item() == 1
-    #
-    # def reward_equals(self, elem1, elem2):
-    #     return elem1.item() == elem2.item()
+    def obs_equals(self, elem1, elem2):
+        r = torch.all(torch.eq(elem1, elem2))
+        return r.item() == 1
+
+    def reward_equals(self, elem1, elem2):
+        return elem1.item() == elem2.item()
 
     def to(self, device):
         self.obs = self.obs.to(device)

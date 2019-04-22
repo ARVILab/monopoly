@@ -75,8 +75,8 @@ class Trainer(object):
         for eps in range(self.episodes):
 
             full_games_counter = 0
-            storages1 = [Storage(20000, config.state_space, config.action_space) for _ in range(3)]
-            storages2 = [Storage(20000, config.state_space, config.action_space) for _ in range(3)]
+            storages1 = [Storage(5000, config.state_space, config.action_space) for _ in range(3)]
+            storages2 = [Storage(5000, config.state_space, config.action_space) for _ in range(3)]
 
             for s in storages1:
                 s.to(config.device)
@@ -171,6 +171,7 @@ class Trainer(object):
                             if game.dice.double:
                                 continue
 
+
                             # end turn
                             break
 
@@ -216,8 +217,8 @@ class Trainer(object):
 
 
     def update(self, player, value_losses, action_losses, dist_entropies):
-        # player.storage.truncate()
-        # player.storage.to(self.device)
+        player.storage.truncate()
+        player.storage.to(self.device)
 
         player.policy.eval()
         with torch.no_grad():

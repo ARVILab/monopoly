@@ -29,7 +29,8 @@ class Categorical(nn.Module):
         # self.linear = init_(nn.Linear(num_inputs, num_outputs))
         # self.linear = nn.Linear(num_inputs, num_outputs)
 
-    def act(self, input, mask=None):
+    def act(self, input, mask=None, money=0):
+        # input[0][0] -= (money / 1500)
         x = F.softmax(input, dim=1)
         if mask is not None:
             x = x * mask
