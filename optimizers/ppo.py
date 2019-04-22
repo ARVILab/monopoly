@@ -5,20 +5,34 @@ import torch.optim as optim
 
 from tqdm import tqdm
 
+import datetime
+
 
 class PPO():
-    def __init__(self, policy, clip_param, ppo_epoch, value_loss_coef, entropy_coef, lr, epsilon, max_grad_norm, n_mini_batch):
+    def __init__(self,
+                policy,
+                clip_param,
+                ppo_epoch,
+                n_mini_batch,
+                value_loss_coef,
+                entropy_coef,
+                lr,
+                epsilon,
+                max_grad_norm):
 
         self.policy = policy
 
         self.clip_param = clip_param
         self.ppo_epoch = ppo_epoch
-        self.value_loss_coef = value_loss_coef
-        self.entropy_coef = entropy_coef
-        self.max_grad_norm = max_grad_norm
         self.n_mini_batch = n_mini_batch
 
+        self.value_loss_coef = value_loss_coef
+        self.entropy_coef = entropy_coef
+
+        self.max_grad_norm = max_grad_norm
+
         self.optimizer = optim.Adam(policy.parameters(), lr=lr, eps=epsilon)
+        torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr)
 
     def update(self, storage):
         print('---------PPO updates')
@@ -36,10 +50,11 @@ class PPO():
                 obs_batch, actions_batch, value_preds_batch, return_batch, \
                       masks_batch, old_action_log_probs_batch, adv_targ = sample
 
-                self.policy.base.eval()
-                values, action_log_probs, dist_entropy = self.policy.eval_action(obs_batch, actions_batch)
-                self.policy.base.train()
 
+                self.policy.eval()
+                values, action_log_probs, dist_entropy = self.policy.eval_action(obs_batch,
+                                                                                actions_batch)
+                self.policy.train()
                 ratio = torch.exp(action_log_probs - old_action_log_probs_batch)
                 surr1 = ratio * adv_targ
                 surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
@@ -47,9 +62,19 @@ class PPO():
 
                 value_loss = 0.5 * F.mse_loss(return_batch, values)
 
+                # self.optimizer.zero_grad()
+                # (value_loss * self.value_loss_coef + action_loss - \
+                #                                         dist_entropy * self.entropy_coef).backward()
+
                 self.optimizer.zero_grad()
                 loss = value_loss * self.value_loss_coef + action_loss - dist_entropy * self.entropy_coef
+
+                # start = datetime.datetime.now()
                 loss.backward(retain_graph=True)
+                # end = datetime.datetime.now()
+                # diff = end - start
+                # print('BACKPROP {} SEC'.format(diff.total_seconds()))
+
                 nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
 
                 self.optimizer.step()

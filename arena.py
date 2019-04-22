@@ -6,6 +6,7 @@ import numpy as np
 from monopoly.player import Player
 import config
 from monopoly.game import Game
+from utils.storage import Storage
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,14 +35,14 @@ class Arena(object):
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=agent, player_id=agent_id))
-            players.append(Player(policy=opponent, player_id=opp_id))
+            players.append(Player(policy=agent, player_id=agent_id, storage=Storage(500, config.state_space, config.action_space)))
+            players.append(Player(policy=opponent, player_id=opp_id, storage=Storage(500, config.state_space, config.action_space)))
             shuffle(players)
 
             game = Game(players=players)
 
             for player in players:
-                player.set_game(game)
+                player.set_game(game, n_game)
 
             for n_round in range(self.n_rounds):
                 if config.verbose['round']:
@@ -135,6 +136,8 @@ class Arena(object):
                     for i, player in enumerate(game.lost_players):
                         print('Player {} is on the {} place '.format(player.id, i + 2))
                         player.show()
+
+            # game.players[0].storage.show()
 
 
         winrate_return = 0

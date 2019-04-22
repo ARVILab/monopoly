@@ -19,6 +19,10 @@ class MLP(nn.Module):
             init_(nn.Linear(self.n_inputs, hidden_size)),
             nn.Tanh(),
             init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh()
         )
 
@@ -27,10 +31,14 @@ class MLP(nn.Module):
             nn.Tanh(),
             init_(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
             init_(nn.Linear(hidden_size, 1))
         )
 
-        self.train()
+        # self.train()
 
     @property
     def output_size(self):
@@ -38,6 +46,5 @@ class MLP(nn.Module):
 
     def forward(self, x):
         value = self.critic(x)
-        action_distrib = self.actor(x)
-        action = F.softmax(action_distrib, dim=1)
-        return value, action
+        action_features = self.actor(x)
+        return value, action_features

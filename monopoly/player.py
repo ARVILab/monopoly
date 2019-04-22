@@ -9,7 +9,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 class Player:
-    def __init__(self, policy=None, player_id=None):
+    def __init__(self, policy=None, player_id=None, storage=None):
 
         self.id = player_id             # Identification number
         self.index = 0
@@ -21,7 +21,7 @@ class Player:
         self.is_bankrupt = False        # Bankrupt status
 
         self.policy = policy
-        self.storage = Storage(2000, config.state_space, config.action_space)
+        self.storage = storage
         self.device = config.device
 
         self.obligatory_acts = {
@@ -49,11 +49,16 @@ class Player:
                 if space.is_mortgaged:
                     print('---------------Mortgaged')
 
-    def set_game(self, game):
+    def set_game(self, game, n_game):
         self.game = game
-        obs = self.game.get_state(self)
-        self.storage.add_init_obs(obs, step=0)
-        self.storage.to(self.device)
+
+        if n_game == 0:
+            obs = self.game.get_state(self)
+            self.storage.add_init_obs(obs, step=0)
+            self.storage.to(self.device)
+
+        # self.last_state = obs
+        # self.last_reward = game.get_reward(self, obs)
 
     def act(self, space):
         space_type = space.get_type()
@@ -148,11 +153,14 @@ class Player:
         do_nothing = self.apply_action(action)
 
         if do_nothing:
-            self.game.auction(self, space)
+            # self.game.auction(self, space)
+            pass
+
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
+        # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
         self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
@@ -180,6 +188,7 @@ class Player:
                     next_state = self.game.get_state(self)
                     reward = self.game.get_reward(self, next_state)
 
+                    # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
                     self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
                     return False # means not staying in jail
 
@@ -189,12 +198,14 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
+            # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
             self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
             return True # staying in jail
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
+        # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
         self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
         return False # means he paid or used card
 
@@ -217,6 +228,7 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
+            # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
             self.storage.insert(state, action, action_log_prob, value, reward, [1.0])
 
             if do_nothing:
@@ -600,11 +612,13 @@ class Player:
                         next_state = creditor.game.get_state(creditor)
                         reward = creditor.game.get_reward(creditor, next_state)
 
+                        # if not creditor.obs_equals(creditor.last_state, state) or not creditor.obs_equals(creditor.last_reward, reward):
                         creditor.storage.insert(state, action, action_log_prob, value, reward, [1.0])
                     creditor.update_rent(space)
                 if went_bankrupt:
                     break
         else:
+            self.cash = 0
             if self.game.players_left > 2:
                 for key in self.properties:
                     for space in self.properties[key]:
@@ -616,14 +630,19 @@ class Player:
         self.is_bankrupt = True
         self.position = 0
 
+        mask_params = [True, True, False, False]
+        action_mask = self.get_action_mask(mask_params)
+        action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
+
         state = self.game.get_state(self)
+        value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-        reward = torch.FloatTensor([0.0])
-        action = torch.FloatTensor([0.0])
-        action_log_prob = torch.FloatTensor([0.0])
-        value = torch.FloatTensor([0.0])
+        reward = self.game.get_reward(self, state)
 
-        self.storage.insert(state, action, action_log_prob, value, reward, [0.0])
+        mask = [0.0]
+
+        # if not self.obs_equals(self.last_state, state) or not self.obs_equals(self.last_reward, reward):
+        self.storage.insert(state, action, action_log_prob, value, reward, mask)
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
@@ -675,3 +694,10 @@ class Player:
                     space_cost /= 2
                 total_wealth += space_cost
         self.total_wealth = total_wealth
+
+    def obs_equals(self, elem1, elem2):
+        r = torch.all(torch.eq(elem1, elem2))
+        return r.item() == 1
+
+    def reward_equals(self, elem1, elem2):
+        return elem1.item() == elem2.item()

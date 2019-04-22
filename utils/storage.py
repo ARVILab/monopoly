@@ -69,6 +69,12 @@ class Storage(object):
         #     print('REWARDS:', self.rewards[i])
         #     print('MASKS:', self.masks[i])
 
+    # def obs_equals(self, elem1, elem2):
+    #     r = torch.all(torch.eq(elem1, elem2))
+    #     return r.item() == 1
+    #
+    # def reward_equals(self, elem1, elem2):
+    #     return elem1.item() == elem2.item()
 
     def to(self, device):
         self.obs = self.obs.to(device)
@@ -98,7 +104,8 @@ class Storage(object):
         self.masks[0].copy_(self.masks[-1])
 
     def compute_returns(self, next_value, gamma, tau):
-        self.value_preds[-2] = next_value
+        print('-----Action taken', self.counter)
+        self.value_preds[-1] = next_value
         gae = 0
         for step in reversed(range(self.rewards.size(0))):
             delta = self.rewards[step] + gamma * self.value_preds[step + 1] * self.masks[step + 1] - self.value_preds[step]
@@ -106,7 +113,7 @@ class Storage(object):
             self.returns[step] = gae + self.value_preds[step]
 
     def feed_forward_generator(self, advantages, n_mini_batch):
-        batch_size = self.counter
+        batch_size = self.rewards.size()[0]
         mini_batch_size = batch_size // n_mini_batch
         sampler = BatchSampler(SubsetRandomSampler(range(batch_size)), mini_batch_size, drop_last=False)
         for indices in sampler:
@@ -122,7 +129,7 @@ class Storage(object):
                 value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
     def show(self):
-        print('------------STORAGE {}------------'.format(self.counter))
+        print('------------STORAGE------------'.format(self.counter))
         for i in range(self.obs.size(0) - 1):
             print('--------STEP {}--------'.format(i))
             print('OBS:', self.obs[i])
@@ -131,6 +138,9 @@ class Storage(object):
             print('VALUES:', self.value_preds[i])
             print('REWARDS:', self.rewards[i])
             print('MASKS:', self.masks[i])
+        print('OBS:', self.obs[-1])
+        print('VALUES:', self.value_preds[-1])
+        print('MASKS:', self.masks[-1])
 
     def show_last_step(self):
         print('------------STORAGE LAST STEP------------')

@@ -14,15 +14,17 @@ import numpy as np
 
 def main():
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    # policy = NNWrapper(config.state_space, config.action_space)
-    # policy.to(config.device)
-    #
-    # trainer = Trainer(policy, n_games=500, n_rounds=200, n_eval_games=50, verbose_eval=2, checkpoint_step=2, reset_files=True)
-    # start = datetime.datetime.now()
-    # trainer.run()
-    # end = datetime.datetime.now()
-    # diff = end - start
-    # print('Training took {} min'.format(np.round(diff.total_seconds() / 60, 3)))
+    print('device', config.device)
+
+    policy = NNWrapper(config.state_space, config.action_space)
+    policy.to(config.device)
+
+    trainer = Trainer(policy, n_episodes=100, n_games_per_eps=2, n_rounds=2000, n_eval_games=50, verbose_eval=5, checkpoint_step=5, reset_files=True)
+    start = datetime.datetime.now()
+    trainer.run()
+    end = datetime.datetime.now()
+    diff = end - start
+    print('Training took {} min'.format(np.round(diff.total_seconds() / 60, 3)))
 
 
     # model_eps = list(range(0, 500, 20))
@@ -48,16 +50,20 @@ def main():
 
     # print('Avg time for 50 games:', np.average(times))
 
-    print('ARENA')
-    arena = Arena(n_games=1, verbose=1)
-    policy = torch.load('./models/model-4.pt', map_location=lambda storage, loc: storage)
+    # print('ARENA')
+    # arena = Arena(n_games=1, verbose=1, n_rounds=100)
+    # # policy = torch.load('./models/model-5.pt', map_location=lambda storage, loc: storage)
+    # policy = torch.load('./models/model-5.pt')
+    # # policy = NNWrapper(config.state_space, config.action_space)
+    # # policy.to(config.device)
+    #
+    # policy.eval()
+    # winrate = arena.fight(agent=policy, opponent=FixedAgent(high=350, low=150, jail=100))
+    # # winrate = arena.fight(agent=policy, opponent=RandomAgent())
 
-    # policy = NNWrapper(config.state_space, config.action_space)
-    # policy.to(config.device)
-
-    policy.eval()
-    winrate = arena.fight(agent=policy, opponent=FixedAgent(high=350, low=150, jail=100))
-
+    # print('ARENA')
+    # arena = Arena(n_games=1, verbose=1, n_rounds=2)
+    # arena.fight(agent=FixedAgent(high=350, low=150, jail=100), opponent=FixedAgent(high=350, low=150, jail=100))
 
 if __name__ == '__main__':
     main()

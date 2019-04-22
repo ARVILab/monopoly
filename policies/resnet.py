@@ -49,7 +49,8 @@ class ResNet(nn.Module):
         if use_downsample:
             downsample = nn.Sequential(
                 nn.Linear(hidden_size, hidden_size),
-                nn.BatchNorm1d(hidden_size))
+                nn.BatchNorm1d(hidden_size)
+            )
         layers = []
         layers.append(block(hidden_size, downsample))
         for i in range(1, blocks):
@@ -67,7 +68,7 @@ class ResNet(nn.Module):
         out = F.relu(out)
         out = self.layer1(out)
         out = self.layer2(out)
-        out = self.layer3(out)
+        # out = self.layer3(out)
 
         action_features = self.pi(out)
         value = self.v(out)
