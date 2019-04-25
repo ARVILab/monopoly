@@ -219,8 +219,8 @@ class Game:
         # m = self.get_money(player, opponents)
         # vpc = v / p * c
         # reward = vpc / (1 + np.abs(vpc)) + m / p
-        player.compute_total_wealth()
-        reward = player.total_wealth / 15000
+        # player.compute_total_wealth()
+        reward = player.reward_wealth()
         reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
         # if 'rl' in player.id:
         #     with open('rewards_rl.csv', 'a') as f:

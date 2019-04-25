@@ -27,7 +27,7 @@ class ResidualBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, obs_shape, output_size, hidden_size=128, layers=[2, 2, 2]):
+    def __init__(self, obs_shape, output_size, hidden_size=32, layers=[2, 2, 2]):
         super(ResNet, self).__init__()
 
         self.n_inputs = obs_shape

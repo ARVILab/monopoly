@@ -11,12 +11,21 @@ from utils.storage import Storage
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import os
+from tqdm import tqdm
+
 
 class Arena(object):
     def __init__(self, n_games=100, n_rounds=100, verbose=0):
         self.n_games = n_games
         self.n_rounds = n_rounds
         self.verbose = verbose
+
+        if os.path.exists('rewards_opp.csv'):
+            os.remove('rewards_opp.csv')
+
+        if os.path.exists('rewards_rl.csv'):
+            os.remove('rewards_rl.csv')
 
     def fight(self, agent, opponent, agent_id='rl', opp_id='opp'):
 
@@ -29,14 +38,14 @@ class Arena(object):
         win_stats = {agent_id: 0, opp_id: 0}
         full_games_counter = 0
 
-        for n_game in range(self.n_games):
+        for n_game in tqdm(range(self.n_games)):
 
             if config.verbose['game_start']:
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=agent, player_id=agent_id, storage=Storage(500, config.state_space, config.action_space)))
-            players.append(Player(policy=opponent, player_id=opp_id, storage=Storage(500, config.state_space, config.action_space)))
+            players.append(Player(policy=agent, player_id=agent_id, storage=Storage(20000, config.state_space, config.action_space)))
+            players.append(Player(policy=opponent, player_id=opp_id, storage=Storage(20000, config.state_space, config.action_space)))
             shuffle(players)
 
             game = Game(players=players)
@@ -45,6 +54,7 @@ class Arena(object):
                 player.set_game(game, n_game)
 
             for n_round in range(self.n_rounds):
+            # while True:
                 if config.verbose['round']:
                     logger.info('-----------ROUND {}-----------\n\n'.format(n_round))
 
@@ -55,9 +65,11 @@ class Arena(object):
                 game.update_round()
 
                 for player in game.players:
+
                     if config.verbose['player']:
                         logger.info('-----------PLAYER idx={}, id={}-----------\n\n'.format(player.index, player.id))
 
+                    player.reset_mortgage_buy()
                     if player.is_bankrupt:  # must change it. do it two times because some players can go bankrupt when must pay bank interest
                         game.remove_player(player)  # other player's mortgaged spaces
                         break
@@ -74,8 +86,8 @@ class Arena(object):
                         if not game.is_game_active():  # stopping players loop
                             break
 
-                        if n_round != 0:
-                            player.optional_actions()
+                        # if n_round != 0:
+                        #     player.optional_actions()
 
                         game.dice.roll()
 
@@ -139,20 +151,20 @@ class Arena(object):
 
             # game.players[0].storage.show()
 
-            # p1 = game.players[0]
-            # p2 = game.lost_players[0]
-            # p1.storage.truncate()
-            # p2.storage.truncate()
-            # filename1 = 'rewards_' + p1.id + '.csv'
-            # filename2 = 'rewards_' + p2.id + '.csv'
-            #
-            # for r in p1.storage.rewards:
-            #     with open(filename1, 'a') as f:
-            #         f.write(str(r.item()) + '\n')
-            #
-            # for r in p2.storage.rewards:
-            #     with open(filename2, 'a') as f:
-            #         f.write(str(r.item()) + '\n')
+            p1 = game.players[0]
+            p2 = game.lost_players[0]
+            p1.storage.truncate()
+            p2.storage.truncate()
+            filename1 = 'rewards_' + p1.id + '.csv'
+            filename2 = 'rewards_' + p2.id + '.csv'
+
+            for r in p1.storage.rewards:
+                with open(filename1, 'a') as f:
+                    f.write(str(r.item()) + '\n')
+
+            for r in p2.storage.rewards:
+                with open(filename2, 'a') as f:
+                    f.write(str(r.item()) + '\n')
             #
             # print(p1.id, p1.storage.counter, p2.id, p2.storage.counter)
 

@@ -31,8 +31,8 @@ class PPO():
 
         self.max_grad_norm = max_grad_norm
 
-        self.optimizer = optim.Adam(policy.parameters(), lr=lr, eps=epsilon)
-        torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr)
+        self.optimizer = optim.Adam(policy.base.parameters(), lr=lr, eps=epsilon)
+        # torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr)
 
     def update(self, storage):
         print('---------PPO updates')
@@ -51,10 +51,17 @@ class PPO():
                       masks_batch, old_action_log_probs_batch, adv_targ = sample
 
 
-                self.policy.eval()
+                self.policy.base.eval()
+
+                # start = datetime.datetime.now()
                 values, action_log_probs, dist_entropy = self.policy.eval_action(obs_batch,
-                                                                                actions_batch)
-                self.policy.train()
+                                                                                 actions_batch)
+                # end = datetime.datetime.now()
+                # diff = end - start
+                # print('EVAL {} SEC'.format(diff.total_seconds()))
+
+
+                self.policy.base.train()
                 ratio = torch.exp(action_log_probs - old_action_log_probs_batch)
                 surr1 = ratio * adv_targ
                 surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
@@ -71,6 +78,7 @@ class PPO():
 
                 # start = datetime.datetime.now()
                 loss.backward(retain_graph=True)
+                # loss.backward()
                 # end = datetime.datetime.now()
                 # diff = end - start
                 # print('BACKPROP {} SEC'.format(diff.total_seconds()))

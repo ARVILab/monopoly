@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from utils.weights_init import init, init_normc_
 
 class MLP(nn.Module):
-    def __init__(self, obs_shape, output_shape, hidden_size=64):
+    def __init__(self, obs_shape, output_shape, hidden_size=32):
         super(MLP, self).__init__()
 
         self.n_inputs = obs_shape
@@ -18,10 +18,10 @@ class MLP(nn.Module):
         self.actor = nn.Sequential(
             init_(nn.Linear(self.n_inputs, hidden_size)),
             nn.Tanh(),
-            init_(nn.Linear(hidden_size, hidden_size)),
-            nn.Tanh(),
             init_(nn.Linear(hidden_size, output_shape)),
-            nn.Tanh()
+            # nn.Tanh()
+            # init_(nn.Linear(hidden_size, output_shape)),
+            # nn.Tanh()
             # init_(nn.Linear(hidden_size, hidden_size)),
             # nn.Tanh()
         )
@@ -38,7 +38,7 @@ class MLP(nn.Module):
             init_(nn.Linear(hidden_size, 1))
         )
 
-        # self.train()
+        self.train()
 
     @property
     def output_size(self):

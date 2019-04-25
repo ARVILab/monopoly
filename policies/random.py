@@ -8,7 +8,7 @@ class RandomAgent(object):
     def __init__(self):
         self.device = config.device
 
-    def act(self, state, cash, mask):
+    def act(self, state, cash, mask, mortgages=None, buyings=None):
         actions = np.random.rand(60)
         for i in range(29, 57):
             actions[i] -= state[0][-1].item()

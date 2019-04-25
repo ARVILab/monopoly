@@ -31,7 +31,7 @@ class Trainer(object):
         self.device = config.device
 
         self.episodes = n_episodes
-        self.learning_rate = 1e-4
+        self.learning_rate = 1e-3
         self.clip_param = 0.2
         self.value_loss_coef = 0.5
         self.entropy_coef = 0.01
@@ -75,8 +75,8 @@ class Trainer(object):
         for eps in range(self.episodes):
 
             full_games_counter = 0
-            storages1 = [Storage(5000, config.state_space, config.action_space) for _ in range(3)]
-            storages2 = [Storage(5000, config.state_space, config.action_space) for _ in range(3)]
+            storages1 = [Storage(20000, config.state_space, config.action_space) for _ in range(3)]
+            storages2 = [Storage(20000, config.state_space, config.action_space) for _ in range(3)]
 
             for s in storages1:
                 s.to(config.device)
@@ -88,7 +88,10 @@ class Trainer(object):
 
             for n_game in range(self.n_games):
 
-                self.policy.eval()
+                self.policy.update_decay()
+
+                self.policy.base.eval()
+                self.policy.use_decay = True
 
                 print('---GAME {} / {}'.format(n_game, self.n_games))
 
@@ -111,8 +114,8 @@ class Trainer(object):
                 for player in players:
                     player.set_game(game, n_game)
 
-                # for n_round in range(self.n_rounds):
-                while True:
+                for n_round in range(self.n_rounds):
+                # while True:
 
                     # TODO: change this, don't like three completely the same conditional statements
                     if not game.is_game_active():     # stopping rounds loop
@@ -121,6 +124,8 @@ class Trainer(object):
                     game.update_round()
 
                     for player in game.players:
+
+                        player.reset_mortgage_buy()
 
                         if player.is_bankrupt:            # must change it. do it two times because some players can go bankrupt when must pay bank interest
                             game.remove_player(player)    # other player's mortgaged spaces
@@ -182,7 +187,8 @@ class Trainer(object):
             action_losses = []
             dist_entropies = []
 
-            self.policy.train()
+            self.policy.base.train()
+            self.policy.use_decay = False
 
             for player in game_copy.players:
                 if 'rl' in player.id:
@@ -198,7 +204,7 @@ class Trainer(object):
                                                  np.average(action_losses), np.median(action_losses)))
 
             if eps % self.verbose_eval == 0:
-                self.policy.eval()
+                self.policy.base.eval()
                 print('------Arena')
                 arena = Arena(n_games=self.n_eval_games, n_rounds=self.n_rounds, verbose=0)  # add 3 types of logging. 0 - only show win rates.
                 print('--------RL vs Random')
@@ -220,7 +226,7 @@ class Trainer(object):
         player.storage.truncate()
         player.storage.to(self.device)
 
-        player.policy.eval()
+        player.policy.base.eval()
         with torch.no_grad():
             next_value = player.policy.get_value(player.storage.obs[-1]).detach()
 

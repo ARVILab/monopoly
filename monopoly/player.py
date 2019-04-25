@@ -24,6 +24,9 @@ class Player:
         self.storage = storage
         self.device = config.device
 
+        self.mortgages = []
+        self.buyings = []
+
         self.obligatory_acts = {
             'Idle': None,
             'Street': self.act_on_property,
@@ -59,6 +62,11 @@ class Player:
 
         self.last_state = self.game.get_state(self)
         self.last_reward = game.get_reward(self, self.last_state)
+
+    def reset_mortgage_buy(self):
+        self.mortgages = []
+        self.buyings = []
+
 
     def act(self, space):
         space_type = space.get_type()
@@ -221,7 +229,13 @@ class Player:
             action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
             state = self.game.get_state(self)
-            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, self.mortgages, self.buyings)
+
+            action_item = action.item()
+            if action_item >= 29 and action_item <= 56:
+                self.mortgages.append(action_item)
+            if action_item >= 1 and action_item <= 28:
+                self.buyings.append(action_item)
 
             do_nothing = self.apply_action(action)
 
@@ -235,7 +249,13 @@ class Player:
                 break
 
     def apply_action(self, action):
-        action_item = action.item()
+        try:
+            action_item = action.item()
+        except:
+            with open('error.csv', 'w') as f:
+                print(str(action))
+            action_item = 0
+
         if action_item == 0:
             return True # do nothing
         elif action_item > 0 and action_item < 29:
@@ -694,6 +714,22 @@ class Player:
                     space_cost /= 2
                 total_wealth += space_cost
         self.total_wealth = total_wealth
+
+
+    def reward_wealth(self):
+        total_wealth = self.cash * 0.5
+        for key in self.properties:
+            for space in self.properties[key]:
+                space_cost = 0
+                if space.get_type() == 'Street':
+                    space_cost += space.n_buildings * space.build_cost
+                space_cost += space.price
+                if space.is_mortgaged:
+                    space_cost = space_cost / 2 - space_cost * 0.1
+                if not space.is_mortgaged:
+                    space_cost += space.current_rent * 10
+                total_wealth += space_cost
+        return total_wealth / 10000
 
     def obs_equals(self, elem1, elem2):
         r = torch.all(torch.eq(elem1, elem2))
