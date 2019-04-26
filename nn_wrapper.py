@@ -20,7 +20,7 @@ class NNWrapper(nn.Module):
         self.do_nothing_decay = 1
         self.use_decay = False
 
-    def update_decay(self, c=0.005):
+    def update_decay(self, c=0.001):
         self.call_counter += 1
         self.do_nothing_decay = np.exp(-self.call_counter * c)
         with open('models/decays.csv', 'a') as f:

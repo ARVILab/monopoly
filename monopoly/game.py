@@ -151,9 +151,10 @@ class Game:
         player_properties = self.count_owned_properties(player)
         all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
         properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
-        money = self.get_money(player, opponents)
+        money_ratio = self.get_money(player, opponents)
+        money = player.cash / 10000
 
-        state.extend([position, properties_value, money])
+        state.extend([position, properties_value, money_ratio, money])
 
         state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
         return state

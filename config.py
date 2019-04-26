@@ -44,4 +44,4 @@ monopolies = ('Brown', 'Light Blue', 'Pink',
 
 
 action_space = 60
-state_space = 43
+state_space = 44

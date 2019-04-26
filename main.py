@@ -22,7 +22,8 @@ def main():
     # policy = torch.load('./models/model.pt')
     policy.to(config.device)
 
-    trainer = Trainer(policy, n_episodes=5000, n_games_per_eps=1, n_rounds=5000, n_eval_games=20, verbose_eval=5, checkpoint_step=5, reset_files=True)
+    trainer = Trainer(policy, n_episodes=5000, n_games_per_eps=1, n_rounds=5000, n_eval_games=20, verbose_eval=10,
+                      checkpoint_step=10, reset_files=True)
     start = datetime.datetime.now()
     trainer.run()
     end = datetime.datetime.now()
@@ -32,7 +33,7 @@ def main():
 
     # print('ARENA')
     # arena = Arena(n_games=1, verbose=1, n_rounds=2000)
-    # policy = torch.load('./models/model-130.pt', map_location=lambda storage, loc: storage)
+    # policy = torch.load('./models/model-4120.pt', map_location=lambda storage, loc: storage)
     # # policy = torch.load('./models/model-115.pt')
     # policy.use_decay = False
     # # policy = torch.load('./models/model-5.pt')

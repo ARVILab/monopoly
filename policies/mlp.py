@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from utils.weights_init import init, init_normc_
 
 class MLP(nn.Module):
-    def __init__(self, obs_shape, output_shape, hidden_size=32):
+    def __init__(self, obs_shape, output_shape, hidden_size=128):
         super(MLP, self).__init__()
 
         self.n_inputs = obs_shape
@@ -18,12 +18,11 @@ class MLP(nn.Module):
         self.actor = nn.Sequential(
             init_(nn.Linear(self.n_inputs, hidden_size)),
             nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
             init_(nn.Linear(hidden_size, output_shape)),
-            # nn.Tanh()
-            # init_(nn.Linear(hidden_size, output_shape)),
-            # nn.Tanh()
-            # init_(nn.Linear(hidden_size, hidden_size)),
-            # nn.Tanh()
         )
 
         self.critic = nn.Sequential(
@@ -31,10 +30,10 @@ class MLP(nn.Module):
             nn.Tanh(),
             init_(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
-            # init_(nn.Linear(hidden_size, hidden_size)),
-            # nn.Tanh(),
-            # init_(nn.Linear(hidden_size, hidden_size)),
-            # nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
             init_(nn.Linear(hidden_size, 1))
         )
 
