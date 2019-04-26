@@ -59,13 +59,12 @@ class Trainer(object):
 
             with open(self.file_metrics, 'a') as metrics:
                 metrics.write(
-                    '{},{},{},{},{},{}\n'.format('episode', 'n_agents', 'value_loss_avg', 'value_loss_median',
-                                                 'action_loss_avg', 'action_loss_median'))
+                    '{},{},{},{},{},{},{}\n'.format('episode', 'n_agents', 'value_loss_avg', 'value_loss_median',
+                                                    'action_loss_avg', 'action_loss_median', 'reward_avg'))
 
             with open(self.file_winrates, 'a') as winrates:
                 winrates.write(
                     '{},{},{}\n'.format('episode', 'vs_random', 'vs_fixed'))
-
 
     def run(self):
         config.verbose = {key: False for key in config.verbose}
@@ -95,10 +94,10 @@ class Trainer(object):
 
                 print('---GAME {} / {}'.format(n_game, self.n_games))
 
-                # n_fixed_agents = randint(1, 3)
-                # n_rl_agents = randint(1, 3)
-                n_fixed_agents = 1
-                n_rl_agents = 1
+                n_fixed_agents = randint(1, 2)
+                n_rl_agents = randint(1, 2)
+                # n_fixed_agents = 1
+                # n_rl_agents = 1
                 players = []
                 rl_agents = [Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storages1[idx]) for idx in range(n_rl_agents)]
                 fixed_agents = [Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
@@ -106,7 +105,7 @@ class Trainer(object):
                 players.extend(rl_agents)
                 players.extend(fixed_agents)
                 shuffle(players)
-                print('----- N player', len(players))
+                print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players)
                 game_copy = game
@@ -139,9 +138,6 @@ class Trainer(object):
                         while True:
                             if not game.is_game_active():  # stopping players loop
                                 break
-
-                            # if n_round != 0:
-                            #     player.optional_actions()
 
                             player.optional_actions()
 
@@ -198,10 +194,19 @@ class Trainer(object):
                 if 'rl' in player.id:
                     self.update(player, value_losses, action_losses, dist_entropies)
 
+            rewards = []
+            for player in game_copy.players:
+                if 'rl' in player.id:
+                    rewards.append(player.storage.get_mean_reward())
+
+            for player in game_copy.lost_players:
+                if 'rl' in player.id:
+                    rewards.append(player.storage.get_mean_reward())
+
             with open(self.file_metrics, 'a') as metrics:
                 metrics.write(
-                    '{},{},{},{},{},{}\n'.format(eps, n_rl_agents, np.average(value_losses), np.median(value_losses),
-                                                 np.average(action_losses), np.median(action_losses)))
+                    '{},{},{},{},{},{},{}\n'.format(eps, n_rl_agents, np.average(value_losses), np.median(value_losses),
+                                                    np.average(action_losses), np.median(action_losses), np.mean(rewards)))
 
             if eps % self.verbose_eval == 0:
                 self.policy.base.eval()

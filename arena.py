@@ -86,8 +86,7 @@ class Arena(object):
                         if not game.is_game_active():  # stopping players loop
                             break
 
-                        # if n_round != 0:
-                        #     player.optional_actions()
+                        player.optional_actions()
 
                         game.dice.roll()
 

@@ -15,9 +15,9 @@ class ResidualBlock(nn.Module):
         out = self.fc(x)
         out = self.bn(out)
         out = F.relu(out)
-        # out = self.fc(out)
-        # out = F.relu(out)
-        # out = self.bn(out)
+        out = self.fc(out)
+        out = F.relu(out)
+        out = self.bn(out)
 
         if self.downsample:
             residual = self.downsample(x)
@@ -68,7 +68,7 @@ class ResNet(nn.Module):
         out = F.relu(out)
         out = self.layer1(out)
         out = self.layer2(out)
-        # out = self.layer3(out)
+        out = self.layer3(out)
 
         action_features = self.pi(out)
         value = self.v(out)

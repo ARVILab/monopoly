@@ -154,3 +154,9 @@ class Storage(object):
         print('VALUES:', self.value_preds[last_step])
         print('REWARDS:', self.rewards[last_step])
         print('MASKS:', self.masks[last_step])
+
+    def get_mean_reward(self):
+        reward = 0
+        for i in range(self.counter):
+            reward += self.rewards[i].item()
+        return reward / self.counter

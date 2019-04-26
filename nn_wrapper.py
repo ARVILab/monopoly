@@ -11,8 +11,8 @@ class NNWrapper(nn.Module):
     def __init__(self, obs_shape, action_shape):
         super(NNWrapper, self).__init__()
 
-        # self.base = ResNet(obs_shape, action_shape)
-        self.base = MLP(obs_shape, action_shape)
+        self.base = ResNet(obs_shape, action_shape)
+        # self.base = MLP(obs_shape, action_shape)
 
         self.dist_layer = Categorical()
 

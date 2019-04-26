@@ -33,12 +33,14 @@ def main():
 
     # print('ARENA')
     # arena = Arena(n_games=1, verbose=1, n_rounds=2000)
-    # policy = torch.load('./models/model-4120.pt', map_location=lambda storage, loc: storage)
+    # # policy = torch.load('./models/model-10.pt', map_location=lambda storage, loc: storage)
     # # policy = torch.load('./models/model-115.pt')
-    # policy.use_decay = False
     # # policy = torch.load('./models/model-5.pt')
-    # # policy = NNWrapper(config.state_space, config.action_space)
-    # # policy.to(config.device)
+    # policy = NNWrapper(config.state_space, config.action_space)
+    # policy.to(config.device)
+    #
+    # policy.use_decay = False
+    #
     # policy.eval()
     # winrate = arena.fight(agent=policy, opponent=FixedAgent(high=350, low=150, jail=100))
     # winrate = arena.fight(agent=policy, opponent=RandomAgent())
