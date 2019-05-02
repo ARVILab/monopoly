@@ -27,7 +27,7 @@ class Arena(object):
         if os.path.exists('rewards_rl.csv'):
             os.remove('rewards_rl.csv')
 
-    def fight(self, agent, opponent, agent_id='rl', opp_id='opp'):
+    def fight(self, agent, opponent, agent_id='rl', opp_id='opp', log_rewards=False):
 
         if self.verbose == 0:
             config.verbose = {key: False for key in config.verbose}
@@ -70,6 +70,7 @@ class Arena(object):
                         logger.info('-----------PLAYER idx={}, id={}-----------\n\n'.format(player.index, player.id))
 
                     player.reset_mortgage_buy()
+
                     if player.is_bankrupt:  # must change it. do it two times because some players can go bankrupt when must pay bank interest
                         game.remove_player(player)  # other player's mortgaged spaces
                         break
@@ -87,6 +88,8 @@ class Arena(object):
                             break
 
                         player.optional_actions()
+
+                        player.reset_mortgage_buy()
 
                         game.dice.roll()
 
@@ -148,24 +151,21 @@ class Arena(object):
                         print('Player {} is on the {} place '.format(player.id, i + 2))
                         player.show()
 
-            # game.players[0].storage.show()
+            if log_rewards:
+                p1 = game.players[0]
+                p2 = game.lost_players[0]
+                p1.storage.truncate()
+                p2.storage.truncate()
+                filename1 = 'rewards_' + p1.id + '.csv'
+                filename2 = 'rewards_' + p2.id + '.csv'
 
-            # p1 = game.players[0]
-            # p2 = game.lost_players[0]
-            # p1.storage.truncate()
-            # p2.storage.truncate()
-            # filename1 = 'rewards_' + p1.id + '.csv'
-            # filename2 = 'rewards_' + p2.id + '.csv'
-            #
-            # for r in p1.storage.rewards:
-            #     with open(filename1, 'a') as f:
-            #         f.write(str(r.item()) + '\n')
-            #
-            # for r in p2.storage.rewards:
-            #     with open(filename2, 'a') as f:
-            #         f.write(str(r.item()) + '\n')
-            #
-            # print(p1.id, p1.storage.counter, p2.id, p2.storage.counter)
+                for r in p1.storage.rewards:
+                    with open(filename1, 'a') as f:
+                        f.write(str(r.item()) + '\n')
+
+                for r in p2.storage.rewards:
+                    with open(filename2, 'a') as f:
+                        f.write(str(r.item()) + '\n')
 
 
         winrate_return = 0

@@ -71,7 +71,7 @@ class Trainer(object):
 
         self.policy.base.train()
 
-        for eps in range(self.episodes):
+        for eps in range(self.episodes + 1):
 
             full_games_counter = 0
             storages1 = [Storage(20000, config.state_space, config.action_space) for _ in range(3)]
@@ -94,10 +94,10 @@ class Trainer(object):
 
                 print('---GAME {} / {}'.format(n_game, self.n_games))
 
-                n_fixed_agents = randint(1, 2)
-                n_rl_agents = randint(1, 2)
-                # n_fixed_agents = 1
-                # n_rl_agents = 1
+                # n_fixed_agents = randint(1, 2)
+                # n_rl_agents = randint(1, 2)
+                n_fixed_agents = 1
+                n_rl_agents = 1
                 players = []
                 rl_agents = [Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storages1[idx]) for idx in range(n_rl_agents)]
                 fixed_agents = [Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
@@ -140,6 +140,8 @@ class Trainer(object):
                                 break
 
                             player.optional_actions()
+
+                            player.reset_mortgage_buy()
 
                             game.dice.roll()
 

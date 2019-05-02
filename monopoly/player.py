@@ -158,6 +158,12 @@ class Player:
         state = self.game.get_state(self)
         value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
+        action_item = action.item()
+        if action_item >= 29 and action_item <= 56:
+            self.mortgages.append(action_item)
+        if action_item >= 1 and action_item <= 28:
+            self.buyings.append(action_item)
+
         do_nothing = self.apply_action(action)
 
         if do_nothing:
@@ -683,6 +689,8 @@ class Player:
                 self.go_bankrupt()
 
     def try_to_survive(self):
+        self.reset_mortgage_buy()
+
         if config.verbose['try_to_survive']:
             logger.info('Player {id} tries to survive. Have money {cash}'.format(id=self.id, cash=self.cash))
         while True:

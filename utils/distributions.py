@@ -34,13 +34,13 @@ class Categorical(nn.Module):
         with torch.no_grad():
             x = F.softmax(input, dim=1)
             if use_decay:
-                x[0][0] = x[0][0].item() - x[0][0].item() * decay
+                # x[0][0] = x[0][0].item() - x[0][0].item() * decay
 
                 if state is not None:
-                    for i in range(29, 57):
-                        x[0][i] = np.clip(x[0][i].item() - state[0][-1].item() * decay, .0001, .999)
                     for i in range(1, 29):
                         x[0][i] = np.clip(x[0][i].item() + state[0][-1].item() * decay, .0001, .999)
+                    for i in range(29, 57):
+                        x[0][i] = np.clip(x[0][i].item() - state[0][-1].item() * decay, .0001, .999)
 
             if mask is not None:
                 x = x * mask
