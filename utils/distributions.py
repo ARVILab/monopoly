@@ -22,19 +22,11 @@ class Categorical(nn.Module):
     def __init__(self):
         super(Categorical, self).__init__()
 
-        # init_ = lambda m: init(m,
-        #       nn.init.orthogonal_,
-        #       lambda x: nn.init.constant_(x, 0),
-        #       gain=0.01)
-
-        # self.linear = init_(nn.Linear(num_inputs, num_outputs))
-        # self.linear = nn.Linear(num_inputs, num_outputs)
-
     def act(self, input, mask=None, money=0, decay=0, use_decay=False, state=None, mortgages=None, buyings=None):
         with torch.no_grad():
             x = F.softmax(input, dim=1)
             if use_decay:
-                # x[0][0] = x[0][0].item() - x[0][0].item() * decay
+                x[0][0] = x[0][0].item() - x[0][0].item() * decay
 
                 if state is not None:
                     for i in range(1, 29):

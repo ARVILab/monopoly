@@ -51,39 +51,23 @@ class PPO():
                       masks_batch, old_action_log_probs_batch, adv_targ = sample
 
 
-                self.policy.base.eval()
+                dist, value = model(state)
+                entropy = dist.entropy().mean()
+                new_log_probs = dist.log_prob(action)
 
-                # start = datetime.datetime.now()
-                values, action_log_probs, dist_entropy = self.policy.eval_action(obs_batch,
-                                                                                 actions_batch)
-                # end = datetime.datetime.now()
-                # diff = end - start
-                # print('EVAL {} SEC'.format(diff.total_seconds()))
+                ratio = (new_log_probs - old_log_probs).exp()
+                surr1 = ratio * advantage
+                surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * advantage
 
-
-                self.policy.base.train()
-                ratio = torch.exp(action_log_probs - old_action_log_probs_batch)
-                surr1 = ratio * adv_targ
-                surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
-                action_loss = -torch.min(surr1, surr2).mean()
-
+                action_loss  = -torch.min(surr1, surr2).mean()
                 value_loss = 0.5 * F.mse_loss(return_batch, values)
 
-                # self.optimizer.zero_grad()
-                # (value_loss * self.value_loss_coef + action_loss - \
-                #                                         dist_entropy * self.entropy_coef).backward()
+                loss = 0.5 * critic_loss + actor_loss - 0.001 * entropy
 
-                self.optimizer.zero_grad()
-                loss = value_loss * self.value_loss_coef + action_loss - dist_entropy * self.entropy_coef
+                optimizer.zero_grad()
+                loss.backward()
 
-                # start = datetime.datetime.now()
-                loss.backward(retain_graph=True)
-                # loss.backward()
-                # end = datetime.datetime.now()
-                # diff = end - start
-                # print('BACKPROP {} SEC'.format(diff.total_seconds()))
-
-                nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                # nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
 
                 self.optimizer.step()
 

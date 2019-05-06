@@ -1,18 +1,20 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from policies.mlp import MLP
-from policies.resnet import ResNet
+from policies.actor_critic import ActorCritic
+from policies.dqn
 from utils.distributions import Categorical
 
 import numpy as np
 
 class NNWrapper(nn.Module):
-    def __init__(self, obs_shape, action_shape):
+    def __init__(self, policy_name, obs_shape, action_shape):
         super(NNWrapper, self).__init__()
 
-        # self.base = ResNet(obs_shape, action_shape)
-        self.base = MLP(obs_shape, action_shape)
+        if policy_name == 'actor_critic':
+            self.policy = ActorCritic(obs_shape, output_shape, nn='mlp')
+        elif policy_name == 'dqn':
+            self.policy = DQN(obs_shape, output_shape, nn='mlp')    
 
         self.dist_layer = Categorical()
 
