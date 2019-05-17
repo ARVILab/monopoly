@@ -1,8 +1,7 @@
 from trainer import Trainer
 from nn_wrapper import NNWrapper
-from arena import Arena
-from policies.random import RandomAgent
-from policies.fixed import FixedAgent
+from utils.storage_ppo import StoragePPO
+from utils.storage_dqn import StorageDQN
 import config
 
 import torch
@@ -20,15 +19,13 @@ def main():
     print('device', config.device)
 
     if args.model == 'init':
-        policy = NNWrapper(config.state_space, config.action_space)
-        policy.call_counter = 0
+        policy = NNWrapper('actor_critic', config.state_space, config.action_space)
         policy.to(config.device)
     else:
         policy = torch.load('./models/model.pt')
-        
-    policy.call_counter = 0
 
-    trainer = Trainer(policy, n_episodes=5000, n_games_per_eps=1, n_rounds=5000, n_eval_games=10, verbose_eval=20,
+    storage_class = StoragePPO
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=50, n_rounds=5000, n_eval_games=10, verbose_eval=20,
                       checkpoint_step=5, reset_files=True)
     start = datetime.datetime.now()
     trainer.run()

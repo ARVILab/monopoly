@@ -6,7 +6,7 @@ import numpy as np
 from monopoly.player import Player
 import config
 from monopoly.game import Game
-from utils.storage import Storage
+from utils.storage_ppo import StoragePPO
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ class Arena(object):
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=agent, player_id=agent_id, storage=Storage(20000, config.state_space, config.action_space)))
-            players.append(Player(policy=opponent, player_id=opp_id, storage=Storage(20000, config.state_space, config.action_space)))
+            players.append(Player(policy=agent, player_id=agent_id, storage=StoragePPO()))
+            players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
             shuffle(players)
 
             game = Game(players=players)
@@ -154,8 +154,6 @@ class Arena(object):
             if log_rewards:
                 p1 = game.players[0]
                 p2 = game.lost_players[0]
-                p1.storage.truncate()
-                p2.storage.truncate()
                 filename1 = 'rewards_' + p1.id + '.csv'
                 filename2 = 'rewards_' + p2.id + '.csv'
 

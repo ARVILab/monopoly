@@ -32,7 +32,7 @@ def main():
         policy = NNWrapper(config.state_space, config.action_space)
         policy.to(config.device)
     else:
-        model_name = 'model-{}.pt'.format(np.abs(model))
+        model_name = 'model-{}.pt'.format(np.abs(args.model))
         print('Loading model:', model_name)
         if config.device.type == 'cpu':
             policy = torch.load(os.path.join('./models', model_name), map_location=lambda storage, loc: storage)
