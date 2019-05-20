@@ -12,14 +12,16 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', default='-1', help='model to load; to load specific model use model number')
+    parser.add_argument('--model', default=-1, help='model to load; to load specific model use model number')
     parser.add_argument('--opponent', default='fixed', help='opponent to play against')
     args = parser.parse_args()
 
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('device', config.device)
 
-    if args.model == '-1':
+
+
+    if args.model == -1 and len(os.listdir('models/')) != 0:
         models = list(filter(lambda name: 'model' in name, os.listdir('./models/')))
         model_number = sorted([int(model_name.split('-')[1].split('.')[0]) for model_name in models])[-1]
         model_name = 'model-{}.pt'.format(model_number)
@@ -28,8 +30,8 @@ def main():
             policy = torch.load(os.path.join('./models', model_name), map_location=lambda storage, loc: storage)
         else:
             policy = torch.load(os.path.join('./models', model_name))
-    elif args.model == 'init':
-        policy = NNWrapper(config.state_space, config.action_space)
+    elif args.model == 'init' or len(os.listdir('models/')) == 0:
+        policy = NNWrapper('actor_critic', config.state_space, config.action_space)
         policy.to(config.device)
     else:
         model_name = 'model-{}.pt'.format(np.abs(args.model))

@@ -21,7 +21,7 @@ class StoragePPO(object):
         self.tau = 0.95       # gae_coef
 
     def push(self, state, action, log_prob, value, reward, done):
-        mask = torch.FloatTensor([[0.0] if done else [1.0]]).to(self.device)
+        mask = torch.FloatTensor([done]).to(self.device)
         action = action.to(self.device)
         value = value.to(self.device)
         log_prob = log_prob.to(self.device)

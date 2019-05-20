@@ -661,7 +661,7 @@ class Player:
         with torch.no_grad():
             value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-        reward = self.game.get_reward(self, state)
+        reward = self.game.get_reward(self, state, lost=True)
 
         mask = [0.0]
 
