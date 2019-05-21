@@ -28,6 +28,9 @@ class Game:
         self.get_board(config.board_filename)
         self.update_player_indexes()
 
+        with open('rolls.npy', 'rb') as f:
+            self.rolls = list(np.load(f))
+
     def remove_player(self, loser):
         self.lost_players.append(self.players[loser.index])
         del self.players[loser.index]
@@ -41,7 +44,9 @@ class Game:
             self.players[i].index = i
 
     def pass_dice(self):
-        self.dice = dice.Dice()
+        roll = self.rolls[0]
+        del self.rolls[0]
+        self.dice = dice.Dice(roll)
 
     def update_round(self):
         self.round += 1
@@ -163,8 +168,11 @@ class Game:
         properties_state = []
         for monopoly in config.monopolies:
             player_makes, player_owns = self.get_state_for_monopoly(player, monopoly)
-            opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
-            opponents_make, opponents_own = opponents_state.sum(axis=0)
+            if len(opponents) >= 1:
+                opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
+                opponents_make, opponents_own = opponents_state.sum(axis=0)
+            else:
+                opponents_make, opponents_own = 0, 0
             properties_state.extend([player_makes, opponents_make, player_owns, opponents_own])
         return properties_state
 
@@ -210,10 +218,17 @@ class Game:
         money = 0. if all_money == 0 else np.round(player.cash / all_money, 3)
         return money
 
-    def get_reward(self, player, state, c=1, lost=False):
+    def get_income(self, player, opponents):
+        player_income = player.get_income()
+        all_income = sum([opp.get_income() for opp in opponents]) + player_income
+        income = 0. if all_income == 0 else np.round(player_income / all_income, 3)
+        return income
+
+    def get_reward(self, player, state, c=1, result=0):
 
         state_tmp = state.squeeze(0)
         opponents = self.get_opponents(player)
+
 
         # v = self.get_make_delta(state_tmp)
         # p = self.players_left
@@ -222,15 +237,15 @@ class Game:
         # reward = vpc / (1 + np.abs(vpc)) + m / p
         # player.compute_total_wealth()
 
+        # money = self.get_money(player, opponents)
+        # income = self.get_income(player, opponents)
+        # reward = money + income
+
         # reward = player.reward_wealth()
         # reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
 
-        if lost:
-            reward = -1.
-        else:
-            reward = 0
+        reward = torch.FloatTensor(np.array([result])).unsqueeze(1).to(self.device)
 
-        reward = torch.FloatTensor(np.array([reward])).unsqueeze(1).to(self.device)
         return reward
 
     def get_make_delta(self, state):  # returns difference between what player makes from his properties

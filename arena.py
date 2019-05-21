@@ -53,18 +53,27 @@ class Arena(object):
             for player in players:
                 player.set_game(game, n_game)
 
+            game_finished = False
+
             for n_round in range(self.n_rounds):
+                if game_finished:
+                    break
             # while True:
                 if config.verbose['round']:
                     logger.info('-----------ROUND {}-----------\n\n'.format(n_round))
 
                 # TODO: change this, don't like three completely the same conditional statements
-                if not game.is_game_active():  # stopping rounds loop
-                    break
+                # if not game.is_game_active():  # stopping rounds loop
+                #     player.won()
+                #     break
 
                 game.update_round()
 
                 for player in game.players:
+                    if not game.is_game_active():  # stopping players loop
+                        player.won()
+                        game_finished = True
+                        break
 
                     if config.verbose['player']:
                         logger.info('-----------PLAYER idx={}, id={}-----------\n\n'.format(player.index, player.id))
@@ -75,9 +84,6 @@ class Arena(object):
                         game.remove_player(player)  # other player's mortgaged spaces
                         break
 
-                    if not game.is_game_active():  # stopping players loop
-                        break
-
                     game.pass_dice()
 
                     while True:
@@ -85,6 +91,8 @@ class Arena(object):
                             player.show()
 
                         if not game.is_game_active():  # stopping players loop
+                            player.won()
+                            game_finished = True
                             break
 
                         player.optional_actions()

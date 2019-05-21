@@ -6,19 +6,20 @@ import config
 logger = logging.getLogger(__name__)
 
 class Dice:
-
-    def __init__(self):
+    def __init__(self, roll):
 
         self.roll_sum = None
         self.double = False
         self.double_counter = 0
 
+        self.roll_ = roll
+
     def roll(self):
         """Roll two fair six-sided die and store (1) the sum of the roll, (2) an indicator of whether it was a double
         roll and (3) a counter of the number of consecutive double rolls."""
 
-        roll = np.random.choice(np.arange(1, 7), 2)
-        # roll = np.array([6, 6])
+        # roll = np.random.choice(np.arange(1, 7), 2)
+        roll = self.roll_
         self.roll_sum = roll.sum()
         self.double = roll[0] == roll[1]
         self.double_counter += self.double

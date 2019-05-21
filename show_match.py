@@ -18,8 +18,7 @@ def main():
 
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('device', config.device)
-
-
+    print(args.model)
 
     if args.model == -1 and len(os.listdir('models/')) != 0:
         models = list(filter(lambda name: 'model' in name, os.listdir('./models/')))

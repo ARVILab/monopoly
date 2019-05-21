@@ -653,7 +653,7 @@ class Player:
         self.is_bankrupt = True
         self.position = 0
 
-        mask_params = [True, True, False, False]
+        mask_params = [False, False, False, False]
         action_mask = self.get_action_mask(mask_params)
         action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
 
@@ -661,9 +661,25 @@ class Player:
         with torch.no_grad():
             value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
 
-        reward = self.game.get_reward(self, state, lost=True)
+        reward = self.game.get_reward(self, state, result=-1)
 
         mask = [0.0]
+
+        if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
+            self.storage.push(state, action, action_log_prob, value, reward, mask)
+
+    def won(self):
+        mask_params = [False, False, False, False]
+        action_mask = self.get_action_mask(mask_params)
+        action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
+
+        state = self.game.get_state(self)
+        with torch.no_grad():
+            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+
+        reward = self.game.get_reward(self, state, result=1)
+
+        mask = [1.0]
 
         if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
             self.storage.push(state, action, action_log_prob, value, reward, mask)
@@ -724,19 +740,22 @@ class Player:
 
 
     def reward_wealth(self):
-        total_wealth = self.cash * 0.1
+        money = self.cash * 0.5
+        income = 0
         for key in self.properties:
             for space in self.properties[key]:
-                space_cost = 0
-                if space.get_type() == 'Street':
-                    space_cost += space.n_buildings * space.build_cost
-                space_cost += space.price
-                if space.is_mortgaged:
-                    space_cost = space_cost / 2 - space_cost * 0.1
                 if not space.is_mortgaged:
-                    space_cost += space.current_rent * 10
-                total_wealth += space_cost
-        return total_wealth / 10000
+                    income += space.current_rent
+        reward = (money + income) / 10000
+        return reward
+
+    def get_income(self):
+        income = 0
+        for key in self.properties:
+            for space in self.properties[key]:
+                if not space.is_mortgaged:
+                    income += space.current_rent
+        return income
 
     def obs_equals(self, elem1, elem2):
         r = torch.all(torch.eq(elem1, elem2))

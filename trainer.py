@@ -44,6 +44,8 @@ class Trainer(object):
         self.epsilon = 1e-8
         self.mini_batch_size = 2048
 
+        self.random_games = self.n_games + 1
+
         self.optimizer = PPO(self.policy, self.clip_param, self.ppo_epoch, self.mini_batch_size,
                              self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
 
@@ -72,6 +74,7 @@ class Trainer(object):
         for eps in range(self.episodes + 1):
 
             full_games_counter = 0
+            self.random_games -= 1
 
             game_copy = None
 
@@ -80,16 +83,24 @@ class Trainer(object):
             for n_game in tqdm(range(self.n_games)):
 
 
-                n_fixed_agents = 1
+                n_opps_agents = 1
                 n_rl_agents = 1
                 players = []
 
                 rl_agents = [Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
 
-                fixed_agents = [Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
-                                       player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in range(n_fixed_agents)]
+                if self.random_games > n_game:
+                    opp_agents = [
+                        Player(policy=RandomAgent(),
+                               player_id=str(idx) + '_random', storage=self.storage_class()) for idx in
+                        range(n_opps_agents)]
+                else:
+                    opp_agents = [
+                        Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
+                               player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
+                        range(n_opps_agents)]
                 players.extend(rl_agents)
-                players.extend(fixed_agents)
+                players.extend(opp_agents)
                 shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
@@ -103,6 +114,7 @@ class Trainer(object):
 
                     # TODO: change this, don't like three completely the same conditional statements
                     if not game.is_game_active():     # stopping rounds loop
+                        player.won()
                         break
 
                     game.update_round()
@@ -116,6 +128,7 @@ class Trainer(object):
                             break
 
                         if not game.is_game_active():  # stopping players loop
+                            player.won()
                             break
 
                         game.pass_dice()
