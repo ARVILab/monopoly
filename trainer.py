@@ -44,8 +44,6 @@ class Trainer(object):
         self.epsilon = 1e-8
         self.mini_batch_size = 2048
 
-        self.random_games = self.n_games + 1
-
         self.optimizer = PPO(self.policy, self.clip_param, self.ppo_epoch, self.mini_batch_size,
                              self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
 
@@ -74,31 +72,38 @@ class Trainer(object):
         for eps in range(self.episodes + 1):
 
             full_games_counter = 0
-            self.random_games -= 1
 
             game_copy = None
 
             storage = self.storage_class()
+            self.policy.train_on_fixed = True
+
             print('---STARTING SIMULATIONS')
             for n_game in tqdm(range(self.n_games)):
+
 
 
                 n_opps_agents = 1
                 n_rl_agents = 1
                 players = []
 
-                rl_agents = [Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
+                rl_agents = [
+                    Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
 
-                if self.random_games > n_game:
+                # opp_agents = [
+                #     Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
+                #            player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
+                #     range(n_opps_agents)]
+
+                if np.random.rand() >= 0.8:
                     opp_agents = [
-                        Player(policy=RandomAgent(),
-                               player_id=str(idx) + '_random', storage=self.storage_class()) for idx in
-                        range(n_opps_agents)]
-                else:
-                    opp_agents = [
-                        Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
+                        Player(policy=FixedAgent(high=350, low=150, jail=100),
                                player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
                         range(n_opps_agents)]
+
+                else:
+                    opp_agents = [Player(RandomAgent(), player_id=str(0) + '_random', storage=self.storage_class())]
+
                 players.extend(rl_agents)
                 players.extend(opp_agents)
                 shuffle(players)
@@ -110,25 +115,24 @@ class Trainer(object):
                 for player in players:
                     player.set_game(game, n_game)
 
-                for n_round in range(self.n_rounds):
+                game_finished = False
 
-                    # TODO: change this, don't like three completely the same conditional statements
-                    if not game.is_game_active():     # stopping rounds loop
-                        player.won()
+                for n_round in range(self.n_rounds):
+                    if game_finished:
                         break
 
                     game.update_round()
 
                     for player in game.players:
+                        if not game.is_game_active():  # stopping rounds loop
+                            player.won()
+                            game_finished = True
+                            break
 
                         # player.reset_mortgage_buy()
 
                         if player.is_bankrupt:            # must change it. do it two times because some players can go bankrupt when must pay bank interest
                             game.remove_player(player)    # other player's mortgaged spaces
-                            break
-
-                        if not game.is_game_active():  # stopping players loop
-                            player.won()
                             break
 
                         game.pass_dice()
@@ -206,6 +210,7 @@ class Trainer(object):
                                                     np.average(action_losses), np.median(action_losses), np.mean(rewards)))
 
             if eps % self.verbose_eval == 0:
+                self.policy.train_on_fixed = False
                 print('------Arena')
                 arena = Arena(n_games=self.n_eval_games, n_rounds=self.n_rounds, verbose=0)  # add 3 types of logging. 0 - only show win rates.
                 print('--------RL vs Random')

@@ -52,6 +52,8 @@ class StoragePPO(object):
         self.log_probs = torch.cat(self.log_probs)
         self.values = torch.cat(self.values)
         self.returns = torch.cat(self.returns)
+        self.rewards = torch.cat(self.rewards)
+        self.masks = torch.cat(self.masks)
         self.advantages = self.returns - self.values
         self.advantages = (self.advantages - self.advantages.mean()) / (self.advantages.std() + 1e-5)
 

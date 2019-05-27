@@ -37,16 +37,20 @@ class Categorical(nn.Module):
 
     def act(self, x, mask=None, mortgages=None, buyings=None):
         x = self.linear(x)
-        # with torch.no_grad():
         action_probs = F.softmax(x, dim=1)
         if mask is not None:
             action_probs = action_probs * mask
 
         return FixedCategorical(probs=action_probs)
 
+    def predict_action(self, x):
+        x = self.linear(x)
+        # action_probs = F.softmax(x, dim=1)
+        # return action_probs
+        return x
 
 class ActorCritic(nn.Module):
-    def __init__(self, num_inputs, num_outputs, hidden_size=128, nn='mlp'):
+    def __init__(self, num_inputs, num_outputs, hidden_size=32, nn='mlp'):
         super(ActorCritic, self).__init__()
 
         self.dist_layer = Categorical(hidden_size, num_outputs)
@@ -56,7 +60,6 @@ class ActorCritic(nn.Module):
         elif nn == 'mlp':
             self.base = MLP(num_inputs, hidden_size=hidden_size)
 
-
     def act(self, state, mask=None, mortgages=None, buyings=None):
         value, actor_features = self.base(state)
 
@@ -65,6 +68,12 @@ class ActorCritic(nn.Module):
         action = dist.sample()
         log_prob = dist.log_probs(action)
         return value, action, log_prob
+
+    def predict_action(self, state):
+        value, actor_features = self.base(state)
+
+        action = self.dist_layer.predict_action(actor_features)
+        return value, action
 
     def forward(self, x):
         pass
@@ -82,7 +91,6 @@ class ActorCritic(nn.Module):
 class MLP(nn.Module):
     def __init__(self, num_inputs, hidden_size=64):
         super(MLP, self).__init__()
-
 
         self.actor = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),

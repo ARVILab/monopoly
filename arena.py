@@ -1,4 +1,5 @@
-from random import shuffle
+
+from random import shuffle, randint
 import sys
 import logging
 import numpy as np
@@ -56,16 +57,11 @@ class Arena(object):
             game_finished = False
 
             for n_round in range(self.n_rounds):
+
                 if game_finished:
                     break
-            # while True:
                 if config.verbose['round']:
                     logger.info('-----------ROUND {}-----------\n\n'.format(n_round))
-
-                # TODO: change this, don't like three completely the same conditional statements
-                # if not game.is_game_active():  # stopping rounds loop
-                #     player.won()
-                #     break
 
                 game.update_round()
 

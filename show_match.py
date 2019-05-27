@@ -10,6 +10,8 @@ import datetime
 import numpy as np
 import argparse
 
+from random import randint
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default=-1, help='model to load; to load specific model use model number')
@@ -18,7 +20,8 @@ def main():
 
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('device', config.device)
-    print(args.model)
+
+    # args.opponent = 'random'
 
     if args.model == -1 and len(os.listdir('models/')) != 0:
         models = list(filter(lambda name: 'model' in name, os.listdir('./models/')))
@@ -29,6 +32,8 @@ def main():
             policy = torch.load(os.path.join('./models', model_name), map_location=lambda storage, loc: storage)
         else:
             policy = torch.load(os.path.join('./models', model_name))
+
+        policy.train_on_fixed = False
     elif args.model == 'init' or len(os.listdir('models/')) == 0:
         policy = NNWrapper('actor_critic', config.state_space, config.action_space)
         policy.to(config.device)
@@ -44,16 +49,14 @@ def main():
         opponent = RandomAgent()
     else:
         opponent = FixedAgent(high=350, low=150, jail=100)
-
-    policy.use_decay = False
     policy.eval()
 
     print('SHOW MATCH')
-    arena = Arena(n_games=1, verbose=1, n_rounds=2000)
+    arena = Arena(n_games=1, verbose=1, n_rounds=1000)
 
     start = datetime.datetime.now()
 
-    winrate = arena.fight(agent=policy, opponent=opponent, log_rewards=True)
+    winrate = arena.fight(agent=policy, opponent=opponent, log_rewards=False)
 
     end = datetime.datetime.now()
     diff = end - start

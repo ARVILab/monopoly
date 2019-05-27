@@ -25,7 +25,7 @@ def main():
         policy = torch.load('./models/model.pt')
 
     storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=50, n_rounds=5000, n_eval_games=10, verbose_eval=20,
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=100, n_rounds=1000, n_eval_games=20, verbose_eval=20,
                       checkpoint_step=5, reset_files=True)
     start = datetime.datetime.now()
     trainer.run()

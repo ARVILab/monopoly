@@ -170,7 +170,11 @@ class Player:
         reward = self.game.get_reward(self, next_state)
 
         if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            if action.item() == 0:
+                if np.random.rand() <= 0.1:
+                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            else:
+                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
         do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
@@ -198,8 +202,16 @@ class Player:
                     next_state = self.game.get_state(self)
                     reward = self.game.get_reward(self, next_state)
 
+                    # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
+                    #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
                     if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        if action.item() == 0:
+                            if np.random.rand() <= 0.1:
+                                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        else:
+                            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
                     return False # means not staying in jail
 
             if config.verbose['stay_in_jail']:
@@ -208,15 +220,30 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
+            # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
+            #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
             if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                if action.item() == 0:
+                    if np.random.rand() <= 0.1:
+                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                else:
+                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
             return True # staying in jail
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
+        # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
+        #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
         if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            if action.item() == 0:
+                if np.random.rand() <= 0.1:
+                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            else:
+                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
         return False # means he paid or used card
 
 
@@ -245,9 +272,14 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
+            # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
+            #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
             if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-
+                if action.item() == 0:
+                    if np.random.rand() <= 0.1:
+                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                else:
+                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
             if do_nothing:
                 break
 
@@ -635,8 +667,17 @@ class Player:
                         next_state = creditor.game.get_state(creditor)
                         reward = creditor.game.get_reward(creditor, next_state)
 
-                        if not creditor.obs_equals(creditor.last_state, state) or not creditor.obs_equals(creditor.last_reward, reward):
-                            creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        # if not creditor.obs_equals(creditor.last_state, state) or not creditor.obs_equals(creditor.last_reward, reward):
+                        #     creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
+                        if not creditor.obs_equals(creditor.last_state, state) or not creditor.reward_equals(creditor.last_reward,
+                                                                                                 reward):
+                            if action.item() == 0:
+                                if np.random.rand() <= 0.1:
+                                    creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                            else:
+                                creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
                     creditor.update_rent(space)
                 if went_bankrupt:
                     break
@@ -651,7 +692,6 @@ class Player:
         self.jail_cards = 0
         self.properties = {}
         self.is_bankrupt = True
-        self.position = 0
 
         mask_params = [False, False, False, False]
         action_mask = self.get_action_mask(mask_params)
@@ -668,6 +708,7 @@ class Player:
         if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
             self.storage.push(state, action, action_log_prob, value, reward, mask)
 
+
     def won(self):
         mask_params = [False, False, False, False]
         action_mask = self.get_action_mask(mask_params)
@@ -679,10 +720,11 @@ class Player:
 
         reward = self.game.get_reward(self, state, result=1)
 
-        mask = [1.0]
+        mask = [0.0]
 
         if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
             self.storage.push(state, action, action_log_prob, value, reward, mask)
+
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
@@ -722,6 +764,7 @@ class Player:
             reward = self.game.get_reward(self, next_state)
 
             self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
             if do_nothing:
                 break
 

@@ -15,22 +15,22 @@ class FixedAgent(object):
         actions = np.zeros(60)
         if cash >= self.high:
             for i in range(1, 29):
-                actions[i] = 1
+                actions[i] = 1.
         elif cash <= self.low:
             for i in range(29, 57):
-                actions[i] = 1
+                actions[i] = 1.
         else:
-            actions[0] = 1
+            actions[0] = 1.
 
-        actions = actions * mask.cpu().numpy()
+        actions = actions * mask.float().cpu().numpy()
 
-        action = np.array([actions.argmax()])
+        action = float(actions.argmax())
         if action == 59:
-            action = 0
+            action = 0.
 
-        action = torch.from_numpy(np.array(action)).float().to(self.device).view(1, -1)
-        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        action = torch.FloatTensor([action]).unsqueeze(0).to(self.device)
+        log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
         return value, action, log_prob
 
     def auction_policy(self, max_bid, org_price, state, cash):
@@ -46,21 +46,21 @@ class FixedAgent(object):
     def jail_policy(self, state, cash, mask):   # need info about amount of card available
         actions = np.zeros(60)
         if cash >= self.jail:
-            actions[57] = 1
+            actions[57] = 1.
         else:
-            actions[0] = 1
+            actions[0] = 1.
 
-        actions = actions * mask.cpu().numpy()
+        actions = actions * mask.float().cpu().numpy()
 
-        action = np.array([actions.argmax()])
+        action = float(actions.argmax())
         if action == 59:
-            action = 0
+            action = 0.
 
-        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
-        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
+        value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        action = torch.FloatTensor([action]).unsqueeze(0).to(self.device)
+        log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
         return value, action, log_prob
 
     def get_value(self):
-        value = torch.from_numpy(np.array([12.])).float().to(self.device).view(1, -1)
+        value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
         return value

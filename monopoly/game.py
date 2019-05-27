@@ -158,8 +158,9 @@ class Game:
         properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
         money_ratio = self.get_money(player, opponents)
         money = player.cash / 10000
+        is_in_jail = float(player.jail_turns > 1)
 
-        state.extend([position, properties_value, money_ratio, money])
+        state.extend([position, properties_value, money_ratio, money, is_in_jail])
 
         state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
         return state
@@ -226,8 +227,8 @@ class Game:
 
     def get_reward(self, player, state, c=1, result=0):
 
-        state_tmp = state.squeeze(0)
-        opponents = self.get_opponents(player)
+        # state_tmp = state.squeeze(0)
+        # opponents = self.get_opponents(player)
 
 
         # v = self.get_make_delta(state_tmp)
@@ -244,7 +245,8 @@ class Game:
         # reward = player.reward_wealth()
         # reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
 
-        reward = torch.FloatTensor(np.array([result])).unsqueeze(1).to(self.device)
+        reward = result
+        reward = torch.FloatTensor([reward]).unsqueeze(1).to(self.device)
 
         return reward
 
