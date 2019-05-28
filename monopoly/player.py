@@ -169,12 +169,10 @@ class Player:
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
-        if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            if action.item() == 0:
-                if np.random.rand() <= 0.1:
-                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-            else:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+        last_available_action = action_mask_gpu.argmax().item()
+
+        if last_available_action != 0:
+            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
         do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
@@ -202,14 +200,8 @@ class Player:
                     next_state = self.game.get_state(self)
                     reward = self.game.get_reward(self, next_state)
 
-                    # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                    #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-
-                    if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                        if action.item() == 0:
-                            if np.random.rand() <= 0.1:
-                                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-                        else:
+                    last_available_action = action_mask_gpu.argmax().item()
+                    if last_available_action != 0:
                             self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
                     return False # means not staying in jail
@@ -220,13 +212,8 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-            if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                if action.item() == 0:
-                    if np.random.rand() <= 0.1:
-                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-                else:
+            last_available_action = action_mask_gpu.argmax().item()
+            if last_available_action != 0:
                     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
             return True # staying in jail
@@ -234,14 +221,8 @@ class Player:
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
-        # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-        #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-
-        if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            if action.item() == 0:
-                if np.random.rand() <= 0.1:
-                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-            else:
+        last_available_action = action_mask_gpu.argmax().item()
+        if last_available_action != 0:
                 self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
         return False # means he paid or used card
@@ -272,14 +253,10 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            # if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            #     self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-            if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-                if action.item() == 0:
-                    if np.random.rand() <= 0.1:
-                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-                else:
-                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            last_available_action = action_mask_gpu.argmax().item()
+            if last_available_action != 0:
+                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+
             if do_nothing:
                 break
 
@@ -606,7 +583,6 @@ class Player:
                     s.current_rent = s.monopoly_rent
 
 
-
     def update_building_rent(self, space):
         n_buildings = space.n_buildings
         if n_buildings == 0:
@@ -667,16 +643,9 @@ class Player:
                         next_state = creditor.game.get_state(creditor)
                         reward = creditor.game.get_reward(creditor, next_state)
 
-                        # if not creditor.obs_equals(creditor.last_state, state) or not creditor.obs_equals(creditor.last_reward, reward):
-                        #     creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
-
-                        if not creditor.obs_equals(creditor.last_state, state) or not creditor.reward_equals(creditor.last_reward,
-                                                                                                 reward):
-                            if action.item() == 0:
-                                if np.random.rand() <= 0.1:
-                                    creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
-                            else:
-                                creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        last_available_action = action_mask_gpu.argmax().item()
+                        if last_available_action != 0:
+                            creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
                     creditor.update_rent(space)
                 if went_bankrupt:
@@ -692,6 +661,7 @@ class Player:
         self.jail_cards = 0
         self.properties = {}
         self.is_bankrupt = True
+        self.position = 0
 
         mask_params = [False, False, False, False]
         action_mask = self.get_action_mask(mask_params)
@@ -705,8 +675,7 @@ class Player:
 
         mask = [0.0]
 
-        if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            self.storage.push(state, action, action_log_prob, value, reward, mask)
+        self.storage.push(state, action, action_log_prob, value, reward, mask)
 
 
     def won(self):
@@ -722,8 +691,7 @@ class Player:
 
         mask = [0.0]
 
-        if not self.obs_equals(self.last_state, state) or not self.reward_equals(self.last_reward, reward):
-            self.storage.push(state, action, action_log_prob, value, reward, mask)
+        self.storage.push(state, action, action_log_prob, value, reward, mask)
 
 
     def pay_bank_interest(self, space):
@@ -763,7 +731,9 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            last_available_action = action_mask_gpu.argmax().item()
+            if last_available_action != 0:
+                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
             if do_nothing:
                 break

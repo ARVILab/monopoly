@@ -1,4 +1,4 @@
-n_players = 3                  # Number of players
+n_players = 2                  # Number of players
 
 board_filename = './data/board.csv'               # Board filename
 chance_cards_filename = './data/chance_cards.csv' # chance cards filename
@@ -44,4 +44,4 @@ monopolies = ('Brown', 'Light Blue', 'Pink',
 
 
 action_space = 60
-state_space = 45
+state_space = 65

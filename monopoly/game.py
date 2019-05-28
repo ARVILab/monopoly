@@ -146,36 +146,97 @@ class Game:
     def get_opponents(self, player):
         return [opp for opp in self.players if opp.id != player.id]
 
+    # def get_state(self, player):
+    #     opponents = self.get_opponents(player)
+    #
+    #     state = self.get_properties_state(player, opponents)
+    #
+    #     position = np.round(player.position / 39, 2)
+    #
+    #     player_properties = self.count_owned_properties(player)
+    #     all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
+    #     properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
+    #     money_ratio = self.get_money(player, opponents)
+    #     money = player.cash / 10000
+    #     is_in_jail = float(player.jail_turns > 1)
+    #
+    #     state.extend([position, properties_value, money_ratio, money, is_in_jail])
+    #
+    #     state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
+    #     return state
+
     def get_state(self, player):
         opponents = self.get_opponents(player)
 
-        state = self.get_properties_state(player, opponents)
-
-        position = np.round(player.position / 39, 2)
-
-        player_properties = self.count_owned_properties(player)
-        all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
-        properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
-        money_ratio = self.get_money(player, opponents)
-        money = player.cash / 10000
+        board_payments = self.get_board_payments(player) / 10000.
+        monopolies_state = self.get_monopolies_state(player, opponents)
+        player_money = player.cash / 10000.
+        opponents_money = (sum([opp.cash for opp in opponents]) / len(opponents)) / 10000. if len(opponents) != 0 else 0
+        player_position = np.round(player.position / 39, 2)
+        opponents_position = [np.round(opp.position / 39, 2) for opp in opponents] if len(opponents) != 0 else [0]
         is_in_jail = float(player.jail_turns > 1)
 
-        state.extend([position, properties_value, money_ratio, money, is_in_jail])
+        state = []
+        state.extend(board_payments)
+        state.extend(monopolies_state)
+        state.extend([player_money, opponents_money, player_position])
+        state.extend(opponents_position)
+        state.extend([is_in_jail])
 
-        state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         return state
 
-    def get_properties_state(self, player, opponents):
+
+    def get_board_payments(self, player):
+        payments = np.zeros(40)
+        for field in self.board:
+            position = field.position
+            type = field.type
+            if type == 'Idle':
+                if position == 0:
+                    payments[position] = 200
+                else:
+                    payments[position] = 0
+            elif type == 'Tax':
+                if position == 4:
+                    payments[position] = -200
+                elif position == 38:
+                    payments[position] = -100
+            elif type == 'Jail' or type == 'Chest' or type == 'Chance':
+                payments[position] = 0
+            else:
+                rent = 0
+                if field.owner:
+                    if field.owner.id != player.id and not field.is_mortgaged:
+                        rent = -field.current_rent
+                payments[position] = rent
+        return payments
+
+
+
+    def get_monopolies_state(self, player, opponents):
         properties_state = []
         for monopoly in config.monopolies:
-            player_makes, player_owns = self.get_state_for_monopoly(player, monopoly)
+            _, player_owns = self.get_state_for_monopoly(player, monopoly)
             if len(opponents) >= 1:
                 opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
-                opponents_make, opponents_own = opponents_state.sum(axis=0)
+                _, opponents_own = opponents_state.sum(axis=0)
             else:
                 opponents_make, opponents_own = 0, 0
-            properties_state.extend([player_makes, opponents_make, player_owns, opponents_own])
+            properties_state.extend([player_owns, opponents_own])
         return properties_state
+
+    # def get_properties_state(self, player, opponents):
+    #     properties_state = []
+    #     for monopoly in config.monopolies:
+    #         player_makes, player_owns = self.get_state_for_monopoly(player, monopoly)
+    #         if len(opponents) >= 1:
+    #             opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
+    #             opponents_make, opponents_own = opponents_state.sum(axis=0)
+    #         else:
+    #             opponents_make, opponents_own = 0, 0
+    #         properties_state.extend([player_makes, opponents_make, player_owns, opponents_own])
+    #     return properties_state
 
     def get_state_for_monopoly(self, player, monopoly):
         player_makes = 0

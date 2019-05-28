@@ -69,3 +69,15 @@ class StoragePPO(object):
         for i in range(len(self.rewards)):
             reward += self.rewards[i].item()
         return reward / len(self.rewards)
+
+    def show(self):
+        for i in range(self.states.shape[0]):
+            print('------------------')
+            print('STATE', self.states[i])
+            print('ACTION', self.actions[i])
+            print('LOG PROB', self.log_probs[i])
+            print('REWARD', self.rewards[i])
+            print('VALUE', self.values[i])
+            print('MASK', self.masks[i])
+            print('RETURNS', self.returns[i])
+            print('------------------')

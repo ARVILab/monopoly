@@ -7,7 +7,7 @@ from policies.fixed import FixedAgent
 
 
 class NNWrapper(nn.Module):
-    def __init__(self, policy_name, obs_shape, action_shape):
+    def __init__(self, policy_name, obs_shape, action_shape, train_on_fixed):
         super(NNWrapper, self).__init__()
 
         if policy_name == 'actor_critic':
@@ -15,17 +15,14 @@ class NNWrapper(nn.Module):
         elif policy_name == 'dqn':
             self.policy = DQN(obs_shape, action_shape, nn='mlp')
 
-        # self.fixed_agent = FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150))
         self.fixed_agent = FixedAgent(high=350, low=150, jail=100)
 
-        self.train_on_fixed = True
+        self.train_on_fixed = train_on_fixed
 
     def forward(self, *args):
          raise NotImplementedError
 
     def act(self, state, cash, mask, mortgages=None, buyings=None):
-        # value, action, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
-        # value, action, log_prob = None, None, None
         if self.train_on_fixed:
             value, _, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
             _, action, _ = self.fixed_agent.act(state, cash, mask)
@@ -56,8 +53,6 @@ class NNWrapper(nn.Module):
         return True, 0
 
     def jail_policy(self, state, cash, mask):   # need info about amount of card available
-        # value, action, log_prob = self.policy.act(state, mask=mask)
-        # value, action, log_prob = None, None, None
         if self.train_on_fixed:
             value, _, log_prob = self.policy.act(state, mask=mask)
             _, action, _ = self.fixed_agent.jail_policy(state, cash, mask)

@@ -76,12 +76,12 @@ class Trainer(object):
             game_copy = None
 
             storage = self.storage_class()
-            self.policy.train_on_fixed = True
+
+            if config.train_on_fixed:
+                self.policy.train_on_fixed = True
 
             print('---STARTING SIMULATIONS')
             for n_game in tqdm(range(self.n_games)):
-
-
 
                 n_opps_agents = 1
                 n_rl_agents = 1
@@ -90,12 +90,7 @@ class Trainer(object):
                 rl_agents = [
                     Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
 
-                # opp_agents = [
-                #     Player(policy=FixedAgent(high=randint(300, 400), low=randint(100, 200), jail=randint(50, 150)),
-                #            player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
-                #     range(n_opps_agents)]
-
-                if np.random.rand() >= 0.8:
+                if np.random.rand() >= 0:
                     opp_agents = [
                         Player(policy=FixedAgent(high=350, low=150, jail=100),
                                player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
@@ -106,7 +101,7 @@ class Trainer(object):
 
                 players.extend(rl_agents)
                 players.extend(opp_agents)
-                shuffle(players)
+                # shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players)
@@ -210,7 +205,8 @@ class Trainer(object):
                                                     np.average(action_losses), np.median(action_losses), np.mean(rewards)))
 
             if eps % self.verbose_eval == 0:
-                self.policy.train_on_fixed = False
+                if config.train_on_fixed:
+                    self.policy.train_on_fixed = False
                 print('------Arena')
                 arena = Arena(n_games=self.n_eval_games, n_rounds=self.n_rounds, verbose=0)  # add 3 types of logging. 0 - only show win rates.
                 print('--------RL vs Random')
@@ -232,6 +228,9 @@ class Trainer(object):
             next_value = player.policy.get_value(player.storage.states[-1])
 
         player.storage.compute(next_value)
+
+        player.storage.show()
+
         value_loss, action_loss, dist_entropy = self.optimizer.update(player.storage)
 
         value_losses.append(value_loss)

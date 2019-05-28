@@ -47,17 +47,11 @@ class PPO(object):
             for sample in data_generator:
                 states_batch, actions_batch, old_log_probs_batch, returns_batch, adv_targ = sample
 
-
                 values, actions_pred = self.policy.pred_action(states_batch)
-
                 # actions_batch_one_hot = self.one_hot_encoder(actions_batch, actions_pred.size()[1])
-
-                # action_loss = 0.5 * self.mse_criterion(actions_batch_one_hot, actions_pred)
-
                 action_loss = self.crossentropy_criterion(actions_pred, actions_batch.squeeze(-1).long())
 
                 # values, log_probs, dist_entropy = self.policy.eval_action(states_batch, actions_batch)
-                #
                 # ratio = torch.exp(log_probs - old_log_probs_batch)
                 # surr1 = ratio * adv_targ
                 # surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
@@ -68,6 +62,7 @@ class PPO(object):
                 self.optimizer.zero_grad()
 
                 # loss = value_loss * self.value_loss_coef + action_loss - dist_entropy * self.entropy_coef
+
                 loss = action_loss + value_loss
                 loss.backward()
 
