@@ -169,7 +169,7 @@ class Player:
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
-        last_available_action = action_mask_gpu.argmax().item()
+        last_available_action = action_mask_gpu.cpu().argmax().item()
 
         if last_available_action != 0:
             self.storage.push(state, action, action_log_prob, value, reward, [1.0])
@@ -200,9 +200,9 @@ class Player:
                     next_state = self.game.get_state(self)
                     reward = self.game.get_reward(self, next_state)
 
-                    last_available_action = action_mask_gpu.argmax().item()
+                    last_available_action = action_mask_gpu.cpu().argmax().item()
                     if last_available_action != 0:
-                            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
                     return False # means not staying in jail
 
@@ -212,18 +212,18 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            last_available_action = action_mask_gpu.argmax().item()
+            last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
-                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
             return True # staying in jail
 
         next_state = self.game.get_state(self)
         reward = self.game.get_reward(self, next_state)
 
-        last_available_action = action_mask_gpu.argmax().item()
+        last_available_action = action_mask_gpu.cpu().argmax().item()
         if last_available_action != 0:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
         return False # means he paid or used card
 
@@ -253,7 +253,7 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            last_available_action = action_mask_gpu.argmax().item()
+            last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
                 self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
@@ -643,7 +643,7 @@ class Player:
                         next_state = creditor.game.get_state(creditor)
                         reward = creditor.game.get_reward(creditor, next_state)
 
-                        last_available_action = action_mask_gpu.argmax().item()
+                        last_available_action = action_mask_gpu.cpu().argmax().item()
                         if last_available_action != 0:
                             creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
@@ -731,7 +731,7 @@ class Player:
             next_state = self.game.get_state(self)
             reward = self.game.get_reward(self, next_state)
 
-            last_available_action = action_mask_gpu.argmax().item()
+            last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
                 self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 

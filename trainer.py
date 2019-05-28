@@ -229,7 +229,7 @@ class Trainer(object):
 
         player.storage.compute(next_value)
 
-        player.storage.show()
+        # player.storage.show()
 
         value_loss, action_loss, dist_entropy = self.optimizer.update(player.storage)
 
