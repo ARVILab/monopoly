@@ -50,7 +50,7 @@ class Categorical(nn.Module):
         return x
 
 class ActorCritic(nn.Module):
-    def __init__(self, num_inputs, num_outputs, hidden_size=64, nn='mlp'):
+    def __init__(self, num_inputs, num_outputs, hidden_size=128, nn='mlp'):
         super(ActorCritic, self).__init__()
 
         self.dist_layer = Categorical(hidden_size, num_outputs)
@@ -105,6 +105,10 @@ class MLP(nn.Module):
 
         self.critic = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),
+            nn.Tanh(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.Tanh(),
+            nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),
             nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),

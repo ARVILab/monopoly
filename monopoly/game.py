@@ -44,9 +44,10 @@ class Game:
             self.players[i].index = i
 
     def pass_dice(self):
-        roll = self.rolls[0]
-        del self.rolls[0]
-        self.dice = dice.Dice(roll)
+        # roll = self.rolls[0]
+        # del self.rolls[0]
+        # self.dice = dice.Dice(roll)
+        self.dice = dice.Dice()
 
     def update_round(self):
         self.round += 1
@@ -146,24 +147,6 @@ class Game:
     def get_opponents(self, player):
         return [opp for opp in self.players if opp.id != player.id]
 
-    # def get_state(self, player):
-    #     opponents = self.get_opponents(player)
-    #
-    #     state = self.get_properties_state(player, opponents)
-    #
-    #     position = np.round(player.position / 39, 2)
-    #
-    #     player_properties = self.count_owned_properties(player)
-    #     all_properties = sum([self.count_owned_properties(opponent) for opponent in opponents]) + player_properties
-    #     properties_value = 0 if all_properties == 0 else np.round(player_properties / all_properties, 3)
-    #     money_ratio = self.get_money(player, opponents)
-    #     money = player.cash / 10000
-    #     is_in_jail = float(player.jail_turns > 1)
-    #
-    #     state.extend([position, properties_value, money_ratio, money, is_in_jail])
-    #
-    #     state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
-    #     return state
 
     def get_state(self, player):
         opponents = self.get_opponents(player)
@@ -213,7 +196,6 @@ class Game:
         return payments
 
 
-
     def get_monopolies_state(self, player, opponents):
         properties_state = []
         for monopoly in config.monopolies:
@@ -226,17 +208,6 @@ class Game:
             properties_state.extend([player_owns, opponents_own])
         return properties_state
 
-    # def get_properties_state(self, player, opponents):
-    #     properties_state = []
-    #     for monopoly in config.monopolies:
-    #         player_makes, player_owns = self.get_state_for_monopoly(player, monopoly)
-    #         if len(opponents) >= 1:
-    #             opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
-    #             opponents_make, opponents_own = opponents_state.sum(axis=0)
-    #         else:
-    #             opponents_make, opponents_own = 0, 0
-    #         properties_state.extend([player_makes, opponents_make, player_owns, opponents_own])
-    #     return properties_state
 
     def get_state_for_monopoly(self, player, monopoly):
         player_makes = 0

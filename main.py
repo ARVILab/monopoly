@@ -28,8 +28,8 @@ def main():
         policy = torch.load('./models/model.pt')
 
     storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=1, n_rounds=1000, n_eval_games=20, verbose_eval=20,
-                      checkpoint_step=5, reset_files=True)
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=100, n_rounds=2000, n_eval_games=20, verbose_eval=5,
+                      checkpoint_step=1, reset_files=True, train_on_fixed=config.train_on_fixed)
     start = datetime.datetime.now()
     trainer.run()
     end = datetime.datetime.now()

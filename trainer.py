@@ -11,6 +11,7 @@ from policies.fixed import FixedAgent
 from policies.random import RandomAgent
 from arena import Arena
 from optimizers.ppo_optimizer import PPO
+from optimizers.supervised_learning import SupervisedLearning
 from monopoly.player import Player
 import config
 from monopoly.game import Game
@@ -21,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 class Trainer(object):
 
-    def __init__(self, policy, storage_class, n_episodes=100, n_games_per_eps=10, n_rounds=200, n_eval_games=50, verbose_eval=50, checkpoint_step=10, reset_files=True):
+    def __init__(self, policy, storage_class, n_episodes=100, n_games_per_eps=10, n_rounds=200, n_eval_games=50,
+                 verbose_eval=50, checkpoint_step=10, reset_files=True, train_on_fixed=True):
         self.policy = policy
         self.n_games = n_games_per_eps
         self.n_rounds = n_rounds
@@ -32,7 +34,7 @@ class Trainer(object):
         self.storage_class = storage_class
 
         self.episodes = n_episodes
-        self.learning_rate = 1e-4
+        self.learning_rate = 3e-4
         self.clip_param = 0.2
         self.value_loss_coef = 0.5
         self.entropy_coef = 0.01
@@ -40,12 +42,18 @@ class Trainer(object):
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.ppo_epoch = 10
+        self.learning_epochs = 1000
         self.epsilon = 1e-8
-        self.mini_batch_size = 2048
+        self.mini_batch_size = 16384
 
-        self.optimizer = PPO(self.policy, self.clip_param, self.ppo_epoch, self.mini_batch_size,
-                             self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
+        if train_on_fixed:
+            self.optimizer = SupervisedLearning(self.policy, self.mini_batch_size, self.learning_epochs,
+                                                self.value_loss_coef, self.learning_rate)
+        else:
+            self.optimizer = PPO(self.policy, self.clip_param, self.learning_epochs, self.mini_batch_size,
+                                 self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
+
+
 
         self.file_metrics = './models/metrics.csv'
         self.file_winrates = './models/winrates.csv'
@@ -101,7 +109,7 @@ class Trainer(object):
 
                 players.extend(rl_agents)
                 players.extend(opp_agents)
-                # shuffle(players)
+                shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players)

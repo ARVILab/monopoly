@@ -53,7 +53,7 @@ def main():
     policy.eval()
 
     print('SHOW MATCH')
-    arena = Arena(n_games=1, verbose=1, n_rounds=1000)
+    arena = Arena(n_games=50, verbose=0, n_rounds=1000)
 
     start = datetime.datetime.now()
 
