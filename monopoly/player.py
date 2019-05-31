@@ -693,6 +693,20 @@ class Player:
 
         self.storage.push(state, action, action_log_prob, value, reward, mask)
 
+    def draw(self):
+        mask_params = [False, False, False, False]
+        action_mask = self.get_action_mask(mask_params)
+        action_mask_gpu = torch.FloatTensor(action_mask).to(self.device)
+
+        state = self.game.get_state(self)
+        with torch.no_grad():
+            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+
+        reward = self.game.get_reward(self, state, result=-1)
+
+        mask = [0.0]
+
+        self.storage.push(state, action, action_log_prob, value, reward, mask)
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1

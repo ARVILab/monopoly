@@ -22,7 +22,7 @@ class PPO(object):
         self.policy = policy
 
         self.clip_param = clip_param
-        self.n_epoch = n_epochs
+        self.n_epochs = n_epochs
         self.mini_batch_size = mini_batch_size
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
@@ -66,7 +66,7 @@ class PPO(object):
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
 
-        n_updates = self.ppo_epoch * self.mini_batch_size
+        n_updates = self.n_epochs * self.mini_batch_size
 
         value_loss_epoch /= n_updates
         action_loss_epoch /= n_updates

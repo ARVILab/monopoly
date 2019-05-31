@@ -49,7 +49,7 @@ class Arena(object):
             players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
             shuffle(players)
 
-            game = Game(players=players)
+            game = Game(players=players, max_rounds=self.n_rounds)
 
             for player in players:
                 player.set_game(game, n_game)

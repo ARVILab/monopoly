@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 class Game:
 
-    def __init__(self, players):
+    def __init__(self, players, max_rounds=300):
         self.round = 0
+        self.max_rounds = max_rounds
         self.players = players
         self.bank = bank.Bank()
         self.board = []
@@ -158,6 +159,7 @@ class Game:
         player_position = np.round(player.position / 39, 2)
         opponents_position = [np.round(opp.position / 39, 2) for opp in opponents] if len(opponents) != 0 else [0]
         is_in_jail = float(player.jail_turns > 1)
+        round = self.round / self.max_rounds
 
         state = []
         state.extend(board_payments)
@@ -165,6 +167,7 @@ class Game:
         state.extend([player_money, opponents_money, player_position])
         state.extend(opponents_position)
         state.extend([is_in_jail])
+        state.extend([round])
 
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         return state

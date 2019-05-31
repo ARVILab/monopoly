@@ -34,7 +34,7 @@ class Trainer(object):
         self.storage_class = storage_class
 
         self.episodes = n_episodes
-        self.learning_rate = 3e-4
+        self.learning_rate = 1e-4
         self.clip_param = 0.2
         self.value_loss_coef = 0.5
         self.entropy_coef = 0.01
@@ -42,9 +42,9 @@ class Trainer(object):
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.learning_epochs = 1000
+        self.learning_epochs = 30
         self.epsilon = 1e-8
-        self.mini_batch_size = 16384
+        self.mini_batch_size = 4096
 
         if train_on_fixed:
             self.optimizer = SupervisedLearning(self.policy, self.mini_batch_size, self.learning_epochs,
@@ -98,21 +98,21 @@ class Trainer(object):
                 rl_agents = [
                     Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
 
-                if np.random.rand() >= 0:
+                if config.train_on_fixed:
                     opp_agents = [
                         Player(policy=FixedAgent(high=350, low=150, jail=100),
                                player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
                         range(n_opps_agents)]
-
                 else:
-                    opp_agents = [Player(RandomAgent(), player_id=str(0) + '_random', storage=self.storage_class())]
+                    opp_agents = [
+                        Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
 
                 players.extend(rl_agents)
                 players.extend(opp_agents)
                 shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
-                game = Game(players=players)
+                game = Game(players=players, max_rounds=self.n_rounds)
                 game_copy = game
 
                 for player in players:
@@ -185,6 +185,9 @@ class Trainer(object):
 
                 if game.players_left == 1:
                     full_games_counter += 1
+                else:
+                    for player in game.players:
+                       player.draw()
 
             value_losses = []
             action_losses = []
