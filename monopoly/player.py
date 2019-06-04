@@ -738,7 +738,7 @@ class Player:
 
             state = self.game.get_state(self)
             with torch.no_grad():
-                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, survive=True)
 
             do_nothing = self.apply_action(action)
 

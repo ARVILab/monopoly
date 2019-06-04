@@ -30,7 +30,7 @@ def main():
         policy = torch.load('./supervised_models/model-60.pt', map_location=lambda storage, loc: storage)
 
     storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=2, n_rounds=5, n_eval_games=20, verbose_eval=20,
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=100, n_rounds=300, n_eval_games=20, verbose_eval=20,
                       checkpoint_step=1, reset_files=True, train_on_fixed=config.train_on_fixed)
     start = datetime.datetime.now()
     trainer.run()
