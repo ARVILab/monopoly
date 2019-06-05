@@ -204,6 +204,7 @@ class Player:
                     if last_available_action != 0:
                         self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
+                    self.jail_turns = 0
                     return False # means not staying in jail
 
             if config.verbose['stay_in_jail']:
@@ -225,6 +226,7 @@ class Player:
         if last_available_action != 0:
             self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
+        self.jail_turns = 0
         return False # means he paid or used card
 
 
@@ -331,7 +333,7 @@ class Player:
 
             self.pay(money_owned)
         else:
-            self.try_to_survive()
+            self.try_to_survive(money_owned)
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
@@ -507,7 +509,7 @@ class Player:
                 if self.have_enough_money(money_owned):
                     self.pay(money_owned, space.owner)
                 else:
-                    self.try_to_survive()
+                    self.try_to_survive(money_owned)
                     if self.have_enough_money(money_owned):
                         self.pay(money_owned, space.owner)
                     else:
@@ -538,7 +540,7 @@ class Player:
         if self.have_enough_money(money_owned):
             self.pay(money_owned)
         else:
-            self.try_to_survive()
+            self.try_to_survive(money_owned)
             if self.have_enough_money(money_owned):
                 self.pay(money_owned)
             else:
@@ -713,7 +715,7 @@ class Player:
         if self.have_enough_money(bank_interest):
             self.pay(bank_interest)
         else:
-            self.try_to_survive()
+            self.try_to_survive(bank_interest)
             if self.have_enough_money(bank_interest):
                 self.pay(bank_interest)
             else:
@@ -726,8 +728,11 @@ class Player:
                             interest=bank_interest))
                 self.go_bankrupt()
 
-    def try_to_survive(self):
+    def try_to_survive(self, money_owned):
         self.reset_mortgage_buy()
+
+        if self.id == 'opp':
+            print('HYI')
 
         if config.verbose['try_to_survive']:
             logger.info('Player {id} tries to survive. Have money {cash}'.format(id=self.id, cash=self.cash))
@@ -738,7 +743,7 @@ class Player:
 
             state = self.game.get_state(self)
             with torch.no_grad():
-                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, survive=True)
+                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, survive=True, money_owned=money_owned)
 
             do_nothing = self.apply_action(action)
 

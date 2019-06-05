@@ -158,7 +158,7 @@ class Game:
         opponents_money = (sum([opp.cash for opp in opponents]) / len(opponents)) / 10000. if len(opponents) != 0 else 0
         player_position = np.round(player.position / 39, 2)
         opponents_position = [np.round(opp.position / 39, 2) for opp in opponents] if len(opponents) != 0 else [0]
-        is_in_jail = float(player.jail_turns > 1)
+        is_in_jail = float(player.jail_turns >= 1)
         round = np.round(self.round / self.max_rounds, 5)
 
         state = []

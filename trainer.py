@@ -47,6 +47,7 @@ class Trainer(object):
         self.mini_batch_size = 4096
 
         if train_on_fixed:
+            self.learning_epochs = 100
             self.optimizer = SupervisedLearning(self.policy, self.mini_batch_size, self.learning_epochs,
                                                 self.value_loss_coef, self.learning_rate)
         else:

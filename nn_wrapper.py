@@ -22,10 +22,10 @@ class NNWrapper(nn.Module):
     def forward(self, *args):
          raise NotImplementedError
 
-    def act(self, state, cash, mask, survive=False, mortgages=None, buyings=None):
+    def act(self, state, cash, mask, survive=False, money_owned=0, mortgages=None, buyings=None):
         if self.train_on_fixed:
             value, _, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
-            _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive)
+            _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive, money_owned=money_owned)
         else:
             value, action, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
         return value, action, log_prob

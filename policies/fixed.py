@@ -11,16 +11,23 @@ class FixedAgent(object):
         self.jail = jail
         self.device = config.device
 
-    def act(self, state, cash, mask, survive=False, mortgages=None, buyings=None):
+    def act(self, state, cash, mask, survive=False, money_owned=0, mortgages=None, buyings=None):
         actions = np.zeros(60)
-        if cash >= self.high:
-            for i in range(1, 29):
-                actions[i] = 1.
-        elif cash <= self.low or survive:
-            for i in range(29, 57):
-                actions[i] = 1.
+        if survive:
+            if cash < money_owned:
+                for i in range(29, 57):
+                    actions[i] = 1.
+            else:
+                actions[0] = 1.
         else:
-            actions[0] = 1.
+            if cash >= self.high:
+                for i in range(1, 29):
+                    actions[i] = 1.
+            elif cash <= self.low:
+                for i in range(29, 57):
+                    actions[i] = 1.
+            else:
+                actions[0] = 1.
 
         actions = actions * mask.float().cpu().numpy()
 

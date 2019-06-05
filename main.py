@@ -19,7 +19,7 @@ def main():
     # config.device = 'cpu'
     print('device', config.device)
 
-    # args.model = 1
+    # args.model = 2364
 
     config.train_on_fixed = True
     if args.model == 'init':
@@ -27,10 +27,13 @@ def main():
         policy = NNWrapper('actor_critic', config.state_space, config.action_space, config.train_on_fixed)
         policy.to(config.device)
     else:
-        policy = torch.load('./supervised_models/model-60.pt', map_location=lambda storage, loc: storage)
+        if config.device.type == 'cpu':
+            policy = torch.load('./supervised_models/model-{}.pt'.format(args.model), map_location=lambda storage, loc: storage)
+        else:
+            policy = torch.load('./supervised_models/model-{}.pt'.format(args.model))
 
     storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=100, n_rounds=300, n_eval_games=20, verbose_eval=20,
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=10, n_games_per_eps=1, n_rounds=300, n_eval_games=20, verbose_eval=20,
                       checkpoint_step=1, reset_files=True, train_on_fixed=config.train_on_fixed)
     start = datetime.datetime.now()
     trainer.run()

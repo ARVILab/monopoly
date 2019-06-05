@@ -18,7 +18,7 @@ class Dice:
         """Roll two fair six-sided die and store (1) the sum of the roll, (2) an indicator of whether it was a double
         roll and (3) a counter of the number of consecutive double rolls."""
 
-        if self.roll_:
+        if self.roll_ is not None:
             roll = self.roll_
         else:
             roll = np.random.choice(np.arange(1, 7), 2)
