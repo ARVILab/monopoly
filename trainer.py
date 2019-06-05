@@ -83,7 +83,8 @@ class Trainer(object):
 
             game_copy = None
 
-            storage = self.storage_class()
+            storage1 = self.storage_class()
+            storage2 = self.storage_class()
 
             if config.train_on_fixed:
                 self.policy.train_on_fixed = True
@@ -96,7 +97,7 @@ class Trainer(object):
                 players = []
 
                 rl_agents = [
-                    Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage) for idx in range(n_rl_agents)]
+                    Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage1) for idx in range(n_rl_agents)]
 
                 if config.train_on_fixed:
                     opp_agents = [
@@ -105,7 +106,7 @@ class Trainer(object):
                         range(n_opps_agents)]
                 else:
                     opp_agents = [
-                        Player(policy=self.policy, player_id=str(idx + 1) + '_rl', storage=storage) for idx in range(n_rl_agents)]
+                        Player(policy=self.policy, player_id=str(idx + 1) + '_rl', storage=storage2) for idx in range(n_rl_agents)]
 
                 players.extend(rl_agents)
                 players.extend(opp_agents)
