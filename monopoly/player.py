@@ -731,9 +731,6 @@ class Player:
     def try_to_survive(self, money_owned):
         self.reset_mortgage_buy()
 
-        if self.id == 'opp':
-            print('HYI')
-
         if config.verbose['try_to_survive']:
             logger.info('Player {id} tries to survive. Have money {cash}'.format(id=self.id, cash=self.cash))
         while True:

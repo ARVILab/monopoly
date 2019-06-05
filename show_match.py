@@ -22,6 +22,7 @@ def main():
     print('device', config.device)
 
     # args.opponent = 'random'
+    # args.model = 2886
 
     config.train_on_fixed = True
     if args.model == -1 and len(os.listdir('models/')) != 0:
