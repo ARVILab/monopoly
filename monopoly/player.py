@@ -257,7 +257,11 @@ class Player:
 
             last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                if action.item() == 0:
+                    if np.random.rand() > 0.99:
+                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                else:
+                    self.storage.push(state, action, action_log_prob, value, reward, [1.0])
 
             if do_nothing:
                 break

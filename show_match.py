@@ -22,7 +22,7 @@ def main():
     print('device', config.device)
 
     # args.opponent = 'random'
-    # args.model = 2886
+    # args.model = 620
 
     config.train_on_fixed = True
     if args.model == -1 and len(os.listdir('models/')) != 0:
@@ -32,6 +32,7 @@ def main():
         print('Loading model:', model_name)
         if config.device.type == 'cpu':
             policy = torch.load(os.path.join('./models', model_name), map_location=lambda storage, loc: storage)
+            policy.fixed_agent.device = config.device
         else:
             policy = torch.load(os.path.join('./models', model_name))
 
@@ -44,8 +45,10 @@ def main():
         print('Loading model:', model_name)
         if config.device.type == 'cpu':
             policy = torch.load(os.path.join('./models', model_name), map_location=lambda storage, loc: storage)
+            policy.fixed_agent.device = config.device
         else:
             policy = torch.load(os.path.join('./models', model_name))
+        policy.train_on_fixed = False
 
     if args.opponent == 'random':
         opponent = RandomAgent()
@@ -58,7 +61,7 @@ def main():
 
     start = datetime.datetime.now()
 
-    winrate = arena.fight(agent=policy, opponent=opponent, log_rewards=False)
+    winrate = arena.fight(agent=policy, opponent=opponent, log_rewards=True)
 
     end = datetime.datetime.now()
     diff = end - start

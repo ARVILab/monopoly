@@ -45,8 +45,8 @@ class Arena(object):
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=agent, player_id=agent_id, storage=StoragePPO()))
             players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
+            players.append(Player(policy=agent, player_id=agent_id, storage=StoragePPO()))
             shuffle(players)
 
             game = Game(players=players, max_rounds=self.n_rounds)
@@ -157,7 +157,10 @@ class Arena(object):
 
             if log_rewards:
                 p1 = game.players[0]
-                p2 = game.lost_players[0]
+                if len(game.players) == 1:
+                    p2 = game.lost_players[0]
+                else:
+                    p2 = game.players[1]
                 filename1 = 'rewards_' + p1.id + '.csv'
                 filename2 = 'rewards_' + p2.id + '.csv'
 

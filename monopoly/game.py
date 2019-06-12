@@ -247,23 +247,37 @@ class Game:
         return make_value, own_value
 
     def count_owned_properties(self, player):
-        return sum([len(player.properties[key]) for key in player.properties])
+        return np.sum([len(player.properties[key]) for key in player.properties])
 
     def get_money(self, player, opponents):
-        all_money = sum([opp.cash for opp in opponents]) + player.cash
+        all_money = np.sum([opp.cash for opp in opponents]) + player.cash
         money = 0. if all_money == 0 else np.round(player.cash / all_money, 3)
         return money
 
     def get_income(self, player, opponents):
         player_income = player.get_income()
-        all_income = sum([opp.get_income() for opp in opponents]) + player_income
+        all_income = np.sum([opp.get_income() for opp in opponents]) + player_income
         income = 0. if all_income == 0 else np.round(player_income / all_income, 3)
         return income
+
+    def get_money_diff(self, player, opponents):
+        opps_money = np.sum([opp.cash for opp in opponents])
+        return player.cash - opps_money
+
+    def get_income_diff(self, player, opponents):
+        player_income = player.get_income()
+        opps_income = np.sum([opp.get_income() for opp in opponents])
+        return player_income - opps_income
+
+    def normalize(self, x, x_min, x_max, a=-1, b=1): # value, init range min, init range max, result range min, result range max
+        value = (x - x_min) / (x_max - x_min) * (b - a) + a
+        value = np.clip(value, a, b)
+        return value
 
     def get_reward(self, player, state, c=1, result=0):
 
         # state_tmp = state.squeeze(0)
-        # opponents = self.get_opponents(player)
+        opponents = self.get_opponents(player)
 
 
         # v = self.get_make_delta(state_tmp)
@@ -280,7 +294,13 @@ class Game:
         # reward = player.reward_wealth()
         # reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
 
-        reward = result
+        money_diff = self.normalize(x=self.get_money_diff(player, opponents), x_min=-500, x_max=500)
+        income_diff = self.normalize(self.get_income_diff(player, opponents), x_min=-200, x_max=200)
+
+        reward = money_diff * 0.3 + income_diff * 0.7
+        reward = np.round(reward / 10000., 5)
+
+        # reward = result
         reward = torch.FloatTensor([reward]).unsqueeze(1).to(self.device)
 
         return reward

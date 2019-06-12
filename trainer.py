@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class Trainer(object):
 
     def __init__(self, policy, storage_class, n_episodes=100, n_games_per_eps=10, n_rounds=200, n_eval_games=50,
-                 verbose_eval=50, checkpoint_step=10, reset_files=True, train_on_fixed=True):
+                 verbose_eval=50, checkpoint_step=10, reset_files=True, train_on_fixed=True, self_play=False):
         self.policy = policy
         self.n_games = n_games_per_eps
         self.n_rounds = n_rounds
@@ -42,11 +42,14 @@ class Trainer(object):
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.learning_epochs = 100
+        self.learning_epochs = 50
         self.epsilon = 1e-8
-        self.mini_batch_size = 16384
+        self.mini_batch_size = 8192
 
-        if train_on_fixed:
+        self.train_on_fixed = train_on_fixed
+        self.self_play = self_play
+
+        if self.train_on_fixed:
             self.optimizer = SupervisedLearning(self.policy, self.mini_batch_size, self.learning_epochs,
                                                 self.value_loss_coef, self.learning_rate)
         else:
@@ -86,7 +89,7 @@ class Trainer(object):
             storage1 = self.storage_class()
             storage2 = self.storage_class()
 
-            if config.train_on_fixed:
+            if self.train_on_fixed:
                 self.policy.train_on_fixed = True
 
             print('---STARTING SIMULATIONS')
@@ -99,7 +102,7 @@ class Trainer(object):
                 rl_agents = [
                     Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage1) for idx in range(n_rl_agents)]
 
-                if config.train_on_fixed:
+                if self.self_play:
                     opp_agents = [
                         Player(policy=FixedAgent(high=350, low=150, jail=100),
                                player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
@@ -217,7 +220,7 @@ class Trainer(object):
                                                     np.average(action_losses), np.median(action_losses), np.mean(rewards)))
 
             if eps % self.verbose_eval == 0:
-                if config.train_on_fixed:
+                if self.train_on_fixed:
                     self.policy.train_on_fixed = False
                 print('------Arena')
                 arena = Arena(n_games=self.n_eval_games, n_rounds=self.n_rounds, verbose=0)  # add 3 types of logging. 0 - only show win rates.
