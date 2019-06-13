@@ -34,7 +34,7 @@ class Trainer(object):
         self.storage_class = storage_class
 
         self.episodes = n_episodes
-        self.learning_rate = 1e-5
+        self.learning_rate = 3e-4
         self.clip_param = 0.2
         self.value_loss_coef = 0.5
         self.entropy_coef = 0.01
@@ -42,9 +42,9 @@ class Trainer(object):
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.learning_epochs = 50
+        self.learning_epochs = 10
         self.epsilon = 1e-8
-        self.mini_batch_size = 8192
+        self.mini_batch_size = 4096
 
         self.train_on_fixed = train_on_fixed
         self.self_play = self_play
@@ -102,7 +102,7 @@ class Trainer(object):
                 rl_agents = [
                     Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage1) for idx in range(n_rl_agents)]
 
-                if self.self_play:
+                if not self.self_play:
                     opp_agents = [
                         Player(policy=FixedAgent(high=350, low=150, jail=100),
                                player_id=str(idx) + '_fixed', storage=self.storage_class()) for idx in
@@ -111,9 +111,9 @@ class Trainer(object):
                     opp_agents = [
                         Player(policy=self.policy, player_id=str(idx + 1) + '_rl', storage=storage2) for idx in range(n_rl_agents)]
 
-                players.extend(rl_agents)
                 players.extend(opp_agents)
-                shuffle(players)
+                players.extend(rl_agents)
+                # shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players, max_rounds=self.n_rounds)

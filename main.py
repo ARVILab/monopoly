@@ -37,7 +37,7 @@ def main():
         policy.train_on_fixed = config.train_on_fixed
 
     storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=100, n_rounds=500, n_eval_games=50, verbose_eval=50,
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=1, n_rounds=500, n_eval_games=20, verbose_eval=20,
                       checkpoint_step=1, reset_files=True, train_on_fixed=config.train_on_fixed, self_play=config.self_play)
     start = datetime.datetime.now()
     trainer.run()

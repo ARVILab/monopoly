@@ -45,10 +45,10 @@ class Game:
             self.players[i].index = i
 
     def pass_dice(self):
-        # roll = self.rolls[0]
-        # del self.rolls[0]
-        # self.dice = dice.Dice(roll)
-        self.dice = dice.Dice()
+        roll = self.rolls[0]
+        del self.rolls[0]
+        self.dice = dice.Dice(roll)
+        # self.dice = dice.Dice()
 
     def update_round(self):
         self.round += 1
@@ -261,13 +261,14 @@ class Game:
         return income
 
     def get_money_diff(self, player, opponents):
-        opps_money = np.sum([opp.cash for opp in opponents])
-        return player.cash - opps_money
+        player_money_norm = self.normalize(player.cash, x_min=0, x_max=2000)
+        opps_money_norm = self.normalize(opponents[0].cash, x_min=0, x_max=2000) if len(opponents) == 1 else 0
+        return player_money_norm - opps_money_norm
 
     def get_income_diff(self, player, opponents):
-        player_income = player.get_income()
-        opps_income = np.sum([opp.get_income() for opp in opponents])
-        return player_income - opps_income
+        player_income_norm = self.normalize(player.get_income(), x_min=0, x_max=500)
+        opps_income_norm = self.normalize(opponents[0].get_income(), x_min=0, x_max=500) if len(opponents) == 1 else 0
+        return player_income_norm - opps_income_norm
 
     def normalize(self, x, x_min, x_max, a=-1, b=1): # value, init range min, init range max, result range min, result range max
         value = (x - x_min) / (x_max - x_min) * (b - a) + a
@@ -294,11 +295,10 @@ class Game:
         # reward = player.reward_wealth()
         # reward = torch.from_numpy(np.array(np.round(reward, 5))).float().to(self.device).view(1, -1)
 
-        money_diff = self.normalize(x=self.get_money_diff(player, opponents), x_min=-500, x_max=500)
-        income_diff = self.normalize(self.get_income_diff(player, opponents), x_min=-200, x_max=200)
+        money_diff = self.get_money_diff(player, opponents)
+        income_diff = self.get_income_diff(player, opponents)
 
-        reward = money_diff * 0.3 + income_diff * 0.7
-        reward = np.round(reward / 10000., 5)
+        reward = money_diff * 0.2 + income_diff * 0.8
 
         # reward = result
         reward = torch.FloatTensor([reward]).unsqueeze(1).to(self.device)
