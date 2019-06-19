@@ -45,8 +45,8 @@ class Arena(object):
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
             players.append(Player(policy=agent, player_id=agent_id, storage=StoragePPO()))
+            players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
             # shuffle(players)
 
             game = Game(players=players, max_rounds=self.n_rounds)
@@ -103,6 +103,10 @@ class Arena(object):
                                 player.optional_actions()
                                 break
 
+                        if player.is_bankrupt:
+                            game.remove_player(player)
+                            break
+
                         if game.dice.double_counter == 3:
                             player.go_to_jail()
                             break
@@ -131,7 +135,7 @@ class Arena(object):
 
                         break
 
-
+            # print('SAMPLES:', len(players[0].storage.rewards))
             if game.players_left != 1:
                 leaderboard = game.get_leaderboard()
                 win_stats[str(leaderboard[0].id)] += 1

@@ -37,14 +37,14 @@ class Trainer(object):
         self.learning_rate = 3e-4
         self.clip_param = 0.2
         self.value_loss_coef = 0.5
-        self.entropy_coef = 0.01
+        self.entropy_coef = 0.05
         self.alpha = 0.99
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.learning_epochs = 10
+        self.learning_epochs = 600
         self.epsilon = 1e-8
-        self.mini_batch_size = 4096
+        self.mini_batch_size = 16384
 
         self.train_on_fixed = train_on_fixed
         self.self_play = self_play
@@ -111,9 +111,9 @@ class Trainer(object):
                     opp_agents = [
                         Player(policy=self.policy, player_id=str(idx + 1) + '_rl', storage=storage2) for idx in range(n_rl_agents)]
 
-                players.extend(opp_agents)
                 players.extend(rl_agents)
-                # shuffle(players)
+                players.extend(opp_agents)
+                shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players, max_rounds=self.n_rounds)
@@ -159,6 +159,10 @@ class Trainer(object):
                                 if stay_in_jail:
                                     player.optional_actions()
                                     break
+
+                            if player.is_bankrupt:
+                                game.remove_player(player)
+                                break
 
                             if game.dice.double_counter == 3:
                                 player.go_to_jail()

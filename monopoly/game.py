@@ -2,6 +2,7 @@ import logging
 import pandas as pd
 import numpy as np
 import torch
+import json
 
 import config
 from . import bank
@@ -29,8 +30,11 @@ class Game:
         self.get_board(config.board_filename)
         self.update_player_indexes()
 
-        with open('rolls.npy', 'rb') as f:
+        with open('data/rolls.npy', 'rb') as f:
             self.rolls = list(np.load(f))
+
+        with open('data/positions.json') as json_file:
+            self.positions = json.load(json_file)
 
     def remove_player(self, loser):
         self.lost_players.append(self.players[loser.index])
@@ -45,10 +49,10 @@ class Game:
             self.players[i].index = i
 
     def pass_dice(self):
-        roll = self.rolls[0]
-        del self.rolls[0]
-        self.dice = dice.Dice(roll)
-        # self.dice = dice.Dice()
+        # roll = self.rolls[0]
+        # del self.rolls[0]
+        # self.dice = dice.Dice(roll)
+        self.dice = dice.Dice()
 
     def update_round(self):
         self.round += 1
@@ -148,29 +152,100 @@ class Game:
     def get_opponents(self, player):
         return [opp for opp in self.players if opp.id != player.id]
 
-
     def get_state(self, player):
         opponents = self.get_opponents(player)
 
-        board_payments = self.get_board_payments(player) / 10000.
-        monopolies_state = self.get_monopolies_state(player, opponents)
-        player_money = player.cash / 10000.
-        opponents_money = (sum([opp.cash for opp in opponents]) / len(opponents)) / 10000. if len(opponents) != 0 else 0
+        state = self.get_monopolies_state(player, opponents)
+
+        is_in_jail = float(player.jail_turns > 1)
+        jail_turns = player.jail_turns
+
+        is_curr_street_unowned, street_price = self.get_street_unowned_and_price(player.position)
+        street_price = self.normalize(street_price, x_min=0, x_max=200, a=0)
+
+        curr_space_rent = self.get_current_space_rent(player.position, player.id, is_in_jail)  # if on tax or on opponent's street or jail
+        curr_space_rent = self.normalize(curr_space_rent, x_min=0, x_max=400, a=0)
+
         player_position = np.round(player.position / 39, 2)
-        opponents_position = [np.round(opp.position / 39, 2) for opp in opponents] if len(opponents) != 0 else [0]
-        is_in_jail = float(player.jail_turns >= 1)
+        opp_position = np.round(opponents[0].position / 39, 2) if len(opponents) == 1 else 0
         round = np.round(self.round / self.max_rounds, 5)
 
-        state = []
-        state.extend(board_payments)
-        state.extend(monopolies_state)
-        state.extend([player_money, opponents_money, player_position])
-        state.extend(opponents_position)
-        state.extend([is_in_jail])
-        state.extend([round])
+        mortgaged_street = self.get_mortgaged_streets(player)
 
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        player_money_norm = self.normalize(player.cash, x_min=0, x_max=2500, a=0)
+        opps_money_norm = self.normalize(opponents[0].cash, x_min=0, x_max=2500, a=0) if len(opponents) == 1 else 0
+
+        state.extend(mortgaged_street)
+        state.extend([player_money_norm, opps_money_norm, is_in_jail, jail_turns, is_curr_street_unowned, street_price,
+                      curr_space_rent, player_position, opp_position, round])
+
+
+        state = torch.from_numpy(np.array(state)).float().to(self.device).view(1, -1)
+
         return state
+
+    def get_current_space_rent(self, position, player_id, is_in_jail):
+        space = self.board[position]
+        space_type = space.get_type()
+        if space_type in ['Railroad', 'Street', 'Utility']:
+            if space.owner:
+                if space.owner.id != player_id:
+                    if not space.is_mortgaged:
+                        return space.get_rent()
+            return 0
+        elif space_type == 'Tax':
+            return space.tax
+        elif space_type == 'Jail':
+            if is_in_jail:
+                return 50
+        return 0
+
+    def get_mortgaged_streets(self, player):
+        streets = np.zeros(28)
+        for key in player.properties:
+            for space in player.properties[key]:
+                if space.is_mortgaged:
+                    streets[self.positions[str(space.position)]] = 1
+        return streets
+
+
+    def get_street_unowned_and_price(self, position):
+        space = self.board[position]
+        space_type = space.get_type()
+        if space_type in ['Railroad', 'Street', 'Utility']:
+            if space.owner:
+                return 0, 0
+            else:
+                return 1, space.price
+        return 0, 0
+
+
+    # def get_state(self, player):
+    #     opponents = self.get_opponents(player)
+    #
+    #     player_money = player.cash / 10000.
+    #     state = []
+    #     state.extend([player_money])
+
+        # board_payments = self.get_board_payments(player) / 10000.
+        # monopolies_state = self.get_monopolies_state(player, opponents)
+        # player_money = player.cash / 10000.
+        # opponents_money = (sum([opp.cash for opp in opponents]) / len(opponents)) / 10000. if len(opponents) != 0 else 0
+        # player_position = np.round(player.position / 39, 2)
+        # opponents_position = [np.round(opp.position / 39, 2) for opp in opponents] if len(opponents) != 0 else [0]
+        # is_in_jail = float(player.jail_turns >= 1)
+        # round = np.round(self.round / self.max_rounds, 5)
+        #
+        # state = []
+        # state.extend(board_payments)
+        # state.extend(monopolies_state)
+        # state.extend([player_money, opponents_money, player_position])
+        # state.extend(opponents_position)
+        # state.extend([is_in_jail])
+        # state.extend([round])
+
+        # state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        # return state
 
 
     def get_board_payments(self, player):
@@ -202,13 +277,13 @@ class Game:
     def get_monopolies_state(self, player, opponents):
         properties_state = []
         for monopoly in config.monopolies:
-            _, player_owns = self.get_state_for_monopoly(player, monopoly)
+            player_makes, player_owns = self.get_state_for_monopoly(player, monopoly)
             if len(opponents) >= 1:
                 opponents_state = np.array([self.get_state_for_monopoly(opp, monopoly) for opp in opponents])
-                _, opponents_own = opponents_state.sum(axis=0)
+                opponents_make, opponents_own = opponents_state.sum(axis=0)
             else:
                 opponents_make, opponents_own = 0, 0
-            properties_state.extend([player_owns, opponents_own])
+            properties_state.extend([player_makes, player_owns, opponents_make, opponents_own])
         return properties_state
 
 
@@ -261,13 +336,13 @@ class Game:
         return income
 
     def get_money_diff(self, player, opponents):
-        player_money_norm = self.normalize(player.cash, x_min=0, x_max=2000)
-        opps_money_norm = self.normalize(opponents[0].cash, x_min=0, x_max=2000) if len(opponents) == 1 else 0
+        player_money_norm = self.normalize(player.cash, x_min=0, x_max=2500, a=0)
+        opps_money_norm = self.normalize(opponents[0].cash, x_min=0, x_max=2500, a=0) if len(opponents) == 1 else 0
         return player_money_norm - opps_money_norm
 
     def get_income_diff(self, player, opponents):
-        player_income_norm = self.normalize(player.get_income(), x_min=0, x_max=500)
-        opps_income_norm = self.normalize(opponents[0].get_income(), x_min=0, x_max=500) if len(opponents) == 1 else 0
+        player_income_norm = self.normalize(player.get_income(), x_min=0, x_max=500, a=0)
+        opps_income_norm = self.normalize(opponents[0].get_income(), x_min=0, x_max=500, a=0) if len(opponents) == 1 else 0
         return player_income_norm - opps_income_norm
 
     def normalize(self, x, x_min, x_max, a=-1, b=1): # value, init range min, init range max, result range min, result range max
@@ -298,7 +373,7 @@ class Game:
         money_diff = self.get_money_diff(player, opponents)
         income_diff = self.get_income_diff(player, opponents)
 
-        reward = money_diff * 0.2 + income_diff * 0.8
+        reward = money_diff * 0.15 + income_diff * 0.85
 
         # reward = result
         reward = torch.FloatTensor([reward]).unsqueeze(1).to(self.device)

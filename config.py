@@ -44,4 +44,6 @@ monopolies = ('Brown', 'Light Blue', 'Pink',
 
 
 action_space = 60
-state_space = 66
+state_space = 78
+
+#there are 28 streets

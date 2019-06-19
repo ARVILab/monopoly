@@ -22,7 +22,7 @@ def main():
     print('device', config.device)
 
     # args.opponent = 'random'
-    # args.model = 620
+    args.model = 420
 
     config.train_on_fixed = True
     if args.model == -1 and len(os.listdir('models/')) != 0:
@@ -57,7 +57,7 @@ def main():
     policy.eval()
 
     print('SHOW MATCH')
-    arena = Arena(n_games=10, verbose=0, n_rounds=500)
+    arena = Arena(n_games=20, verbose=0, n_rounds=500)
 
     start = datetime.datetime.now()
 
