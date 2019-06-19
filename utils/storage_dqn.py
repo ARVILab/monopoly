@@ -1,23 +1,24 @@
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 import numpy as np
+import config
 
 
 class StorageDQN(object):
-    def __init__(self, device):
+    def __init__(self):
         self.states = []
         self.actions = []
         self.rewards = []
         self.masks = []
         self.next_states = []
-        self.device = device
+        self.device = config.device
 
     def push(self, state, action, reward, next_state, done):
-        mask = torch.FloatTensor([[0.0] if done else [1.0]]).to(self.device)
-        action = action.unsqueeze(0)
-        reward = torch.FloatTensor(np.array([reward])).unsqueeze(1).to(self.device)
-        state = state.unsqueeze(0)
-        next_state = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
+        mask = torch.FloatTensor([done]).to(self.device)
+        action = action.to(self.device)
+        reward = reward.to(self.device)
+        state = state.to(self.device)
+        next_state = next_state.to(self.device)
 
         self.states.append(state)
         self.actions.append(action)
@@ -25,7 +26,7 @@ class StorageDQN(object):
         self.masks.append(mask)
         self.next_states.append(next_state)
 
-    def compute(self, ):
+    def compute(self):
         self.states = torch.cat(self.states)
         self.actions = torch.cat(self.actions)
         self.rewards = torch.cat(self.rewards)
@@ -38,3 +39,9 @@ class StorageDQN(object):
         for indices in sampler:
             yield self.states[indices, :], self.actions[indices, :], self.rewards[indices, :], \
                   self.next_states[indices, :], self.masks[indices, :]
+
+    def get_mean_reward(self):
+        reward = 0
+        for i in range(len(self.rewards)):
+            reward += self.rewards[i].item()
+        return reward / len(self.rewards)

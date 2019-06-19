@@ -49,10 +49,10 @@ class Game:
             self.players[i].index = i
 
     def pass_dice(self):
-        # roll = self.rolls[0]
-        # del self.rolls[0]
-        # self.dice = dice.Dice(roll)
-        self.dice = dice.Dice()
+        roll = self.rolls[0]
+        del self.rolls[0]
+        self.dice = dice.Dice(roll)
+        # self.dice = dice.Dice()
 
     def update_round(self):
         self.round += 1

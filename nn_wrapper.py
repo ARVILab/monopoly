@@ -10,10 +10,12 @@ class NNWrapper(nn.Module):
     def __init__(self, policy_name, obs_shape, action_shape, train_on_fixed):
         super(NNWrapper, self).__init__()
 
+        self.policy_name = policy_name
+
         if policy_name == 'actor_critic':
             self.policy = ActorCritic(obs_shape, action_shape, nn='mlp')
         elif policy_name == 'dqn':
-            self.policy = DQN(obs_shape, action_shape, nn='mlp')
+            self.policy = DQN(obs_shape, action_shape)
 
         self.fixed_agent = FixedAgent(high=350, low=150, jail=100)
 
@@ -23,12 +25,19 @@ class NNWrapper(nn.Module):
          raise NotImplementedError
 
     def act(self, state, cash, mask, survive=False, money_owned=0, mortgages=None, buyings=None):
-        if self.train_on_fixed:
-            value, _, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
-            _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive, money_owned=money_owned)
-        else:
-            value, action, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
-        return value, action, log_prob
+        if self.policy_name == 'actor_critic':
+            if self.train_on_fixed:
+                value, _, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
+                _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive, money_owned=money_owned)
+            else:
+                value, action, log_prob = self.policy.act(state, mask=mask, mortgages=mortgages, buyings=buyings)
+            return value, action, log_prob
+        elif self.policy_name == 'dqn':
+            if self.train_on_fixed:
+                _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive, money_owned=money_owned)
+            else:
+                action = self.policy.act(state, mask)
+            return action
 
     def eval_action(self, state, action):
         value, log_prob, entropy = self.policy.eval_action(state, action)
@@ -39,7 +48,11 @@ class NNWrapper(nn.Module):
         return value, action_pred
 
     def get_value(self, state):
-        value, _, _ = self.policy.act(state)
+        if self.policy_name == 'actor_critic':
+            value, _, _ = self.policy.act(state)
+        elif self.policy_name == 'dqn':
+            value = self.policy(state)
+            value = value.squeeze(1)
         return value
 
     def auction_policy(self, max_bid, org_price, state, cash):
@@ -53,9 +66,16 @@ class NNWrapper(nn.Module):
         return True, 0
 
     def jail_policy(self, state, cash, mask):   # need info about amount of card available
-        if self.train_on_fixed:
-            value, _, log_prob = self.policy.act(state, mask=mask)
-            _, action, _ = self.fixed_agent.jail_policy(state, cash, mask)
-        else:
-            value, action, log_prob = self.policy.act(state, mask=mask)
-        return value, action, log_prob
+        if self.policy_name == 'actor_critic':
+            if self.train_on_fixed:
+                value, _, log_prob = self.policy.act(state, mask=mask)
+                _, action, _ = self.fixed_agent.jail_policy(state, cash, mask)
+            else:
+                value, action, log_prob = self.policy.act(state, mask=mask)
+            return value, action, log_prob
+        elif self.policy_name == 'dqn':
+            if self.train_on_fixed:
+                _, action, _ = self.fixed_agent.act(state, cash, mask, survive=survive, money_owned=money_owned)
+            else:
+                action = self.policy.act(state, mask)
+            return action

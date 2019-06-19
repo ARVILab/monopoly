@@ -12,6 +12,8 @@ from policies.random import RandomAgent
 from arena import Arena
 from optimizers.ppo_optimizer import PPO
 from optimizers.supervised_learning import SupervisedLearning
+from optimizers.dqn_optimizer import DQNOptimizer
+from nn_wrapper import NNWrapper
 from monopoly.player import Player
 import config
 from monopoly.game import Game
@@ -42,9 +44,13 @@ class Trainer(object):
         self.max_grad_norm = 0.5
         self.discount = 0.99
         self.gae_coef = 0.95
-        self.learning_epochs = 600
+        self.learning_epochs = 10
         self.epsilon = 1e-8
         self.mini_batch_size = 16384
+
+        self.e_decay = 0.005
+        self.target_update = 10
+
 
         self.train_on_fixed = train_on_fixed
         self.self_play = self_play
@@ -53,8 +59,15 @@ class Trainer(object):
             self.optimizer = SupervisedLearning(self.policy, self.mini_batch_size, self.learning_epochs,
                                                 self.value_loss_coef, self.learning_rate)
         else:
-            self.optimizer = PPO(self.policy, self.clip_param, self.learning_epochs, self.mini_batch_size,
-                                 self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
+            if self.policy.policy_name == 'actor_critic':
+                self.optimizer = PPO(self.policy, self.clip_param, self.learning_epochs, self.mini_batch_size,
+                                     self.value_loss_coef, self.entropy_coef, self.learning_rate, self.max_grad_norm)
+            elif self.policy.policy_name == 'dqn':
+                self.target_policy = NNWrapper('dqn', config.state_space, config.action_space, config.train_on_fixed)
+                self.target_policy.to(config.device)
+                self.target_policy.load_state_dict(self.policy.state_dict())
+                self.optimizer = DQNOptimizer(self.policy, self.target_policy, self.mini_batch_size,
+                                              self.discount, self.learning_rate, self.learning_epochs)
 
 
 
@@ -70,8 +83,7 @@ class Trainer(object):
 
             with open(self.file_metrics, 'a') as metrics:
                 metrics.write(
-                    '{},{},{},{},{},{},{}\n'.format('episode', 'n_agents', 'value_loss_avg', 'value_loss_median',
-                                                    'action_loss_avg', 'action_loss_median', 'reward_avg'))
+                    '{},{},{}\n'.format('episode', 'n_agents', 'loss_avg'))
 
             with open(self.file_winrates, 'a') as winrates:
                 winrates.write(
@@ -79,6 +91,8 @@ class Trainer(object):
 
     def run(self):
         config.verbose = {key: False for key in config.verbose}
+
+        get_epsilon = lambda episode: np.exp(-episode * self.e_decay)
 
         for eps in range(self.episodes + 1):
 
@@ -102,6 +116,9 @@ class Trainer(object):
                 rl_agents = [
                     Player(policy=self.policy, player_id=str(idx) + '_rl', storage=storage1) for idx in range(n_rl_agents)]
 
+                if self.policy.policy_name == 'dqn':
+                    self.policy.policy.update_epsilon(get_epsilon(eps))
+
                 if not self.self_play:
                     opp_agents = [
                         Player(policy=FixedAgent(high=350, low=150, jail=100),
@@ -113,7 +130,7 @@ class Trainer(object):
 
                 players.extend(rl_agents)
                 players.extend(opp_agents)
-                shuffle(players)
+                # shuffle(players)
                 # print('----- Players: {} fixed, {} rl'.format(n_fixed_agents, n_rl_agents))
 
                 game = Game(players=players, max_rounds=self.n_rounds)
@@ -197,17 +214,19 @@ class Trainer(object):
                     for player in game.players:
                        player.draw()
 
-            value_losses = []
-            action_losses = []
-            dist_entropies = []
+            losses = []
 
             for player in game_copy.players:
                 if 'rl' in player.id:
-                    self.update(player, value_losses, action_losses, dist_entropies)
+                    self.update(player, losses)
 
             for player in game_copy.lost_players:
                 if 'rl' in player.id:
-                    self.update(player, value_losses, action_losses, dist_entropies)
+                    self.update(player, losses)
+
+
+            if eps % self.target_update == 0:
+                self.target_policy.load_state_dict(self.policy.state_dict())
 
             rewards = []
             for player in game_copy.players:
@@ -219,9 +238,9 @@ class Trainer(object):
                     rewards.append(player.storage.get_mean_reward())
 
             with open(self.file_metrics, 'a') as metrics:
-                metrics.write(
-                    '{},{},{},{},{},{},{}\n'.format(eps, n_rl_agents, np.average(value_losses), np.median(value_losses),
-                                                    np.average(action_losses), np.median(action_losses), np.mean(rewards)))
+                metrics.write('{},{},{}\n'.format(eps, n_rl_agents, np.average(losses)))
+
+
 
             if eps % self.verbose_eval == 0:
                 if self.train_on_fixed:
@@ -229,29 +248,27 @@ class Trainer(object):
                 print('------Arena')
                 arena = Arena(n_games=self.n_eval_games, n_rounds=self.n_rounds, verbose=0)  # add 3 types of logging. 0 - only show win rates.
                 print('--------RL vs Random')
-                winrate_random = arena.fight(agent=self.policy, opponent=RandomAgent(), opp_id='random')
+                winrate_random = arena.fight(agent=self.target_policy, opponent=RandomAgent(), opp_id='random')
                 print('--------RL vs Fixed')
-                winrate_fixed = arena.fight(agent=self.policy, opponent=FixedAgent(high=350, low=150, jail=100), opp_id='fixed')
+                winrate_fixed = arena.fight(agent=self.target_policy, opponent=FixedAgent(high=350, low=150, jail=100), opp_id='fixed')
 
                 with open(self.file_winrates, 'a') as winrates:
                     winrates.write(
                         '{},{},{}\n'.format(eps, winrate_random, winrate_fixed))
 
             if eps % self.checkpoint_step == 0:
-                torch.save(self.policy, os.path.join('models', 'model-{}.pt'.format(eps)))
+                torch.save(self.target_policy, os.path.join('models', 'model-{}.pt'.format(eps)))
 
             print('---Full games {} / {}'.format(full_games_counter, self.n_games))
 
-    def update(self, player, value_losses, action_losses, dist_entropies):
-        with torch.no_grad():
-            next_value = player.policy.get_value(player.storage.states[-1])
+    def update(self, player, losses):
+        # with torch.no_grad():
+        #     next_value = player.policy.get_value(player.storage.states[-1])
 
-        player.storage.compute(next_value)
+        player.storage.compute()
 
         # player.storage.show()
 
-        value_loss, action_loss, dist_entropy = self.optimizer.update(player.storage)
+        loss = self.optimizer.update(player.storage)
+        losses.append(loss)
 
-        value_losses.append(value_loss)
-        action_losses.append(action_loss)
-        dist_entropies.append(dist_entropy)

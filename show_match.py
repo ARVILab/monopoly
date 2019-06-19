@@ -21,10 +21,10 @@ def main():
     config.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('device', config.device)
 
-    # args.opponent = 'random'
-    args.model = 420
+    args.opponent = 'random'
+    # args.model = 420
 
-    config.train_on_fixed = True
+    config.train_on_fixed = False
     if args.model == -1 and len(os.listdir('models/')) != 0:
         models = list(filter(lambda name: 'model' in name, os.listdir('./models/')))
         model_number = sorted([int(model_name.split('-')[1].split('.')[0]) for model_name in models])[-1]
@@ -38,7 +38,8 @@ def main():
 
         policy.train_on_fixed = False
     elif args.model == 'init' or len(os.listdir('models/')) == 0:
-        policy = NNWrapper('actor_critic', config.state_space, config.action_space, config.train_on_fixed)
+        policy = NNWrapper('dqn', config.state_space, config.action_space, config.train_on_fixed)
+        policy.policy.epsilon = 0.
         policy.to(config.device)
     else:
         model_name = 'model-{}.pt'.format(np.abs(args.model))

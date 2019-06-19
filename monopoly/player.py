@@ -151,13 +151,7 @@ class Player:
 
         state = self.game.get_state(self)
         with torch.no_grad():
-            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
-
-        # action_item = action.item()
-        # if action_item >= 29 and action_item <= 56:
-        #     self.mortgages.append(action_item)
-        # if action_item >= 1 and action_item <= 28:
-        #     self.buyings.append(action_item)
+            action = self.policy.act(state, self.cash, action_mask_gpu)
 
         do_nothing = self.apply_action(action)
 
@@ -172,7 +166,7 @@ class Player:
         last_available_action = action_mask_gpu.cpu().argmax().item()
 
         if last_available_action != 0:
-            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            self.storage.push(state, action, reward, next_state, [1.0])
 
     def get_bid(self, max_bid, org_price, state):
         do_nothing, bid = self.policy.auction_policy(max_bid, org_price, state, self.cash)
@@ -187,7 +181,7 @@ class Player:
 
         state = self.game.get_state(self)
         with torch.no_grad():
-            value, action, action_log_prob = self.policy.jail_policy(state, self.cash, action_mask_gpu)
+            action = self.policy.jail_policy(state, self.cash, action_mask_gpu)
 
         do_nothing = self.apply_action(action)
         if do_nothing:
@@ -202,7 +196,7 @@ class Player:
 
                     last_available_action = action_mask_gpu.cpu().argmax().item()
                     if last_available_action != 0:
-                        self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                        self.storage.push(state, action, reward, next_state, [1.0])
 
                     self.jail_turns = 0
                     return False # means not staying in jail
@@ -215,7 +209,7 @@ class Player:
 
             last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                self.storage.push(state, action, reward, next_state, [1.0])
 
             return True # staying in jail
 
@@ -224,7 +218,7 @@ class Player:
 
         last_available_action = action_mask_gpu.cpu().argmax().item()
         if last_available_action != 0:
-            self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+            self.storage.push(state, action, reward, next_state, [1.0])
 
         self.jail_turns = 0
         return False # means he paid or used card
@@ -242,13 +236,7 @@ class Player:
 
             state = self.game.get_state(self)
             with torch.no_grad():
-                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, self.mortgages, self.buyings)
-
-            # action_item = action.item()
-            # if action_item >= 29 and action_item <= 56:
-            #     self.mortgages.append(action_item)
-            # if action_item >= 1 and action_item <= 28:
-            #     self.buyings.append(action_item)
+                action = self.policy.act(state, self.cash, action_mask_gpu)
 
             do_nothing = self.apply_action(action)
 
@@ -257,21 +245,14 @@ class Player:
 
             last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
-                # if action.item() == 0:
-                #     if np.random.rand() > 0.99:
-                #         self.storage.push(state, action, action_log_prob, value, reward, [1.0])
-                # else:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                self.storage.push(state, action, reward, next_state, [1.0])
 
             if do_nothing:
                 break
 
+
     def apply_action(self, action):
-        try:
-            action_item = action.item()
-        except:
-            print(action)
-            raise Exception('WTF')
+        action_item = action.item()
 
         if action_item == 0:
             return True # do nothing
@@ -642,7 +623,7 @@ class Player:
 
                         state = creditor.game.get_state(creditor)
                         with torch.no_grad():
-                            value, action, action_log_prob = creditor.policy.act(state, creditor.cash, action_mask_gpu)
+                            action = creditor.policy.act(state, creditor.cash, action_mask_gpu)
 
                         do_nothing = creditor.apply_action(action)
 
@@ -651,7 +632,7 @@ class Player:
 
                         last_available_action = action_mask_gpu.cpu().argmax().item()
                         if last_available_action != 0:
-                            creditor.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                            creditor.storage.push(state, action, reward, next_state, [1.0])
 
                     creditor.update_rent(space)
                 if went_bankrupt:
@@ -675,13 +656,11 @@ class Player:
 
         state = self.game.get_state(self)
         with torch.no_grad():
-            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+            action = self.policy.act(state, self.cash, action_mask_gpu)
 
         reward = self.game.get_reward(self, state, result=-1)
 
-        mask = [0.0]
-
-        self.storage.push(state, action, action_log_prob, value, reward, mask)
+        self.storage.push(state, action, reward, state, [0.0])
 
 
     def won(self):
@@ -691,13 +670,11 @@ class Player:
 
         state = self.game.get_state(self)
         with torch.no_grad():
-            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+            action = self.policy.act(state, self.cash, action_mask_gpu)
 
         reward = self.game.get_reward(self, state, result=1)
 
-        mask = [0.0]
-
-        self.storage.push(state, action, action_log_prob, value, reward, mask)
+        self.storage.push(state, action, reward, state, [0.0])
 
     def draw(self):
         mask_params = [False, False, False, False]
@@ -706,13 +683,11 @@ class Player:
 
         state = self.game.get_state(self)
         with torch.no_grad():
-            value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu)
+            action = self.policy.act(state, self.cash, action_mask_gpu)
 
         reward = self.game.get_reward(self, state, result=-1)
 
-        mask = [0.0]
-
-        self.storage.push(state, action, action_log_prob, value, reward, mask)
+        self.storage.push(state, action, reward, state, [0.0])
 
     def pay_bank_interest(self, space):
         bank_interest = space.price * 0.1
@@ -744,7 +719,7 @@ class Player:
 
             state = self.game.get_state(self)
             with torch.no_grad():
-                value, action, action_log_prob = self.policy.act(state, self.cash, action_mask_gpu, survive=True, money_owned=money_owned)
+                action = self.policy.act(state, self.cash, action_mask_gpu, survive=True)
 
             do_nothing = self.apply_action(action)
 
@@ -753,7 +728,7 @@ class Player:
 
             last_available_action = action_mask_gpu.cpu().argmax().item()
             if last_available_action != 0:
-                self.storage.push(state, action, action_log_prob, value, reward, [1.0])
+                self.storage.push(state, action, reward, next_state, [1.0])
 
             if do_nothing:
                 break

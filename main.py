@@ -21,11 +21,11 @@ def main():
 
     # args.model = 20
 
-    config.train_on_fixed = True
+    config.train_on_fixed = False
     config.self_play = False
 
     if args.model == 'init':
-        policy = NNWrapper('actor_critic', config.state_space, config.action_space, config.train_on_fixed)
+        policy = NNWrapper('dqn', config.state_space, config.action_space, config.train_on_fixed)
         policy.to(config.device)
     else:
         if config.device.type == 'cpu':
@@ -35,8 +35,8 @@ def main():
 
         policy.train_on_fixed = config.train_on_fixed
 
-    storage_class = StoragePPO
-    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=10, n_rounds=500, n_eval_games=10, verbose_eval=10,
+    storage_class = StorageDQN
+    trainer = Trainer(policy, storage_class=storage_class, n_episodes=5000, n_games_per_eps=1, n_rounds=500, n_eval_games=10, verbose_eval=10,
                       checkpoint_step=10, reset_files=True, train_on_fixed=config.train_on_fixed, self_play=config.self_play)
     start = datetime.datetime.now()
     trainer.run()

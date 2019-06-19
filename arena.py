@@ -8,6 +8,7 @@ from monopoly.player import Player
 import config
 from monopoly.game import Game
 from utils.storage_ppo import StoragePPO
+from utils.storage_dqn import StorageDQN
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,8 +46,8 @@ class Arena(object):
                 logger.info('----------------STARTING GAME {}----------------\n\n'.format(n_game))
 
             players = []
-            players.append(Player(policy=agent, player_id=agent_id, storage=StoragePPO()))
-            players.append(Player(policy=opponent, player_id=opp_id, storage=StoragePPO()))
+            players.append(Player(policy=agent, player_id=agent_id, storage=StorageDQN()))
+            players.append(Player(policy=opponent, player_id=opp_id, storage=StorageDQN()))
             # shuffle(players)
 
             game = Game(players=players, max_rounds=self.n_rounds)

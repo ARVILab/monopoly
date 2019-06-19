@@ -17,10 +17,11 @@ class RandomAgent(object):
 
         action = np.array([actions.argmax()])
 
-        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
-        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        return value, action, log_prob
+        value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        action = torch.FloatTensor(action).unsqueeze(0).to(self.device)
+        log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        # return value, action, log_prob
+        return action
 
     def auction_policy(self, max_bid, org_price, obs, cash):
         resign = np.random.rand(1)[0]
@@ -36,7 +37,8 @@ class RandomAgent(object):
 
         action = np.array([actions.argmax()])
 
-        action = torch.from_numpy(action).float().to(self.device).view(1, -1)
-        value = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        log_prob = torch.from_numpy(np.array([0])).float().to(self.device).view(1, -1)
-        return value, action, log_prob
+        value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        action = torch.FloatTensor(action).unsqueeze(0).to(self.device)
+        log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
+        # return value, action, log_prob
+        return action

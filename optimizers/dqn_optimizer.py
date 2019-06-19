@@ -6,12 +6,14 @@ from tqdm import tqdm
 class DQNOptimizer(object):
     def __init__(self,
                  policy,
+                 target_policy,
                  mini_batch_size,
                  discount,
                  lr,
                  update_epochs):
 
         self.policy = policy
+        self.target_policy = target_policy
         self.mini_batch_size = mini_batch_size
         self.discount = discount
         self.update_epochs = update_epochs
@@ -22,6 +24,7 @@ class DQNOptimizer(object):
     def update(self, storage):
         loss_avg = 0
         n_updates = 0
+        print('------Samples:', len(storage.rewards))
 
         for e in tqdm(range(self.update_epochs)):
             data_generator = storage.sample(self.mini_batch_size)
@@ -30,7 +33,7 @@ class DQNOptimizer(object):
                 states, actions, rewards, next_states, masks = sample
 
                 q_values = self.policy.get_value(states)
-                next_q_values = self.policy.get_value(next_states)
+                next_q_values = self.target_policy.get_value(next_states)
 
                 q_value = q_values.gather(1, actions)
 

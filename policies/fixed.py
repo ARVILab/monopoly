@@ -38,7 +38,8 @@ class FixedAgent(object):
         value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
         action = torch.FloatTensor([action]).unsqueeze(0).to(self.device)
         log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
-        return value, action, log_prob
+        # return value, action, log_prob
+        return action
 
     def auction_policy(self, max_bid, org_price, state, cash):
         if max_bid >= org_price * 2:
@@ -66,7 +67,8 @@ class FixedAgent(object):
         value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
         action = torch.FloatTensor([action]).unsqueeze(0).to(self.device)
         log_prob = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
-        return value, action, log_prob
+        # return value, action, log_prob
+        return action
 
     def get_value(self):
         value = torch.FloatTensor([0.]).unsqueeze(0).to(self.device)
